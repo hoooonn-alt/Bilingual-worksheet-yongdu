@@ -773,6 +773,47 @@
         const MAX_CONCURRENT_REQUESTS = 2;
         const apiRequestQueue = [];
 
+        // 다국어 신경망 번역 언어 코드 매핑 (외부 웹사이트 무설치 폴백 및 전 세계 언어 지원)
+        const LANG_CODE_MAP = {
+            '러시아어': 'ru',
+            '베트남어': 'vi',
+            '중국어': 'zh-CN',
+            '영어': 'en',
+            '네팔어': 'ne',
+            '몽골어': 'mn',
+            '우즈베크어': 'uz',
+            '일본어': 'ja',
+            '필리핀어(타갈로그어)': 'tl',
+            '필리핀어': 'tl',
+            '태국어': 'th',
+            '카자흐어': 'kk',
+            '스페인어': 'es',
+            '아랍어': 'ar',
+            '인도네시아어': 'id',
+            '크메르어': 'km',
+            '캄보디아어': 'km',
+            '미얀마어': 'my',
+            '프랑스어': 'fr',
+            '독일어': 'de',
+            '포르투갈어': 'pt',
+            '힌디어': 'hi',
+            '우르두어': 'ur',
+            '싱할라어': 'si',
+            '벵골어': 'bn',
+            '튀르키예어': 'tr',
+            '터키어': 'tr'
+        };
+
+        function resolveTargetLangCode(targetLang) {
+            const clean = (targetLang || '').trim();
+            if (LANG_CODE_MAP[clean]) return LANG_CODE_MAP[clean];
+            for (const [k, code] of Object.entries(LANG_CODE_MAP)) {
+                if (clean.includes(k) || k.includes(clean)) return code;
+            }
+            if (/^[a-z]{2}(-[A-Z]{2})?$/.test(clean)) return clean;
+            return 'en';
+        }
+
         function registerObjectUrl(url) {
             activeObjectUrls.add(url);
             return url;
@@ -952,8 +993,18 @@
             e.stopPropagation();
             document.getElementById('camera-input').click();
         });
-        document.getElementById('pdf-upload-box').addEventListener('click', () => document.getElementById('pdf-input').click());
-        document.getElementById('ppt-upload-box').addEventListener('click', () => document.getElementById('ppt-input').click());
+        document.getElementById('pdf-input').addEventListener('click', (e) => e.stopPropagation());
+        document.getElementById('camera-input').addEventListener('click', (e) => e.stopPropagation());
+        document.getElementById('ppt-input').addEventListener('click', (e) => e.stopPropagation());
+
+        document.getElementById('pdf-upload-box').addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
+            document.getElementById('pdf-input').click();
+        });
+        document.getElementById('ppt-upload-box').addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
+            document.getElementById('ppt-input').click();
+        });
 
         // 데스크톱 드래그 앤 드롭 지원
         function setupDropzone(boxId, onFileCallback) {
@@ -1058,13 +1109,80 @@
             return `이 문서는 초·중등 교육용 '교과서 및 학습지'입니다. 다문화 학생이 개념과 활동 지시문을 쉽게 이해할 수 있도록 직관적이고 간결한 ${targetLang}로 번역하세요. 번역문은 가급적 간결하게 작성하여 자막 길이가 너무 길어지지 않도록 하세요.`;
         }
 
+        // 외부 웹사이트 배포 시 API 키 없이도 즉시 작동하는 신경망 번역 엔진
+        async function translateSingleTextFallback(text, targetLangCode) {
+            if (!text || !text.trim()) return "";
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl=${encodeURIComponent(targetLangCode)}&dt=t&q=${encodeURIComponent(text.trim())}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("GTX HTTP " + res.status);
+                const data = await res.json();
+                if (Array.isArray(data) && Array.isArray(data[0])) {
+                    return data[0].map(part => part[0] || "").join("").trim();
+                }
+            } catch (e) {
+                try {
+                    const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.trim().slice(0, 450))}&langpair=ko|${encodeURIComponent(targetLangCode)}`;
+                    const mmRes = await fetch(mmUrl);
+                    const mmData = await mmRes.json();
+                    if (mmData?.responseData?.translatedText) {
+                        return mmData.responseData.translatedText.trim();
+                    }
+                } catch (e2) {}
+            }
+            return "";
+        }
+
+        async function translateBatchWithNeuralFallback(texts, targetLang) {
+            const tlCode = resolveTargetLangCode(targetLang);
+            const delimiter = " ||| ";
+            const results = new Array(texts.length).fill("");
+
+            // 문장들을 적정 길이 묶음으로 나누어 고속 번역
+            let chunkIndices = [];
+            let chunkTexts = [];
+            let currentLen = 0;
+
+            async function flushChunk() {
+                if (chunkTexts.length === 0) return;
+                const joined = chunkTexts.join("\n");
+                const translatedJoined = await translateSingleTextFallback(joined, tlCode);
+                const splitLines = translatedJoined.split(/\r?\n/);
+
+                if (splitLines.length === chunkTexts.length) {
+                    chunkIndices.forEach((origIdx, i) => {
+                        results[origIdx] = (splitLines[i] || "").trim();
+                    });
+                } else {
+                    for (let i = 0; i < chunkTexts.length; i++) {
+                        results[chunkIndices[i]] = await translateSingleTextFallback(chunkTexts[i], tlCode);
+                    }
+                }
+                chunkIndices = [];
+                chunkTexts = [];
+                currentLen = 0;
+            }
+
+            for (let i = 0; i < texts.length; i++) {
+                const cleanLine = (texts[i] || "").replace(/\r?\n/g, " ").trim();
+                if (!cleanLine) continue;
+                if (currentLen + cleanLine.length > 900 || chunkTexts.length >= 10) {
+                    await flushChunk();
+                }
+                chunkIndices.push(i);
+                chunkTexts.push(cleanLine);
+                currentLen += cleanLine.length;
+            }
+            await flushChunk();
+            return results;
+        }
+
         async function translatePdfBlocksBatch(texts, targetLang, docType) {
             if (!texts || texts.length === 0) return [];
             const results = new Array(texts.length).fill("");
             const uncachedIndices = [];
             const uncachedTexts = [];
 
-            // 다중 접속 부하 절감을 위한 캐시 조회
             texts.forEach((txt, idx) => {
                 const key = `${targetLang}|${docType}|${txt.trim()}`;
                 if (translationMemoryCache.has(key)) {
@@ -1090,7 +1208,18 @@ ${contextGuide}
 원본 배열:
 ${JSON.stringify(uncachedTexts)}`;
 
-            const res = await callGeminiAPI(prompt, "array");
+            let res = null;
+            try {
+                res = await callGeminiAPI(prompt, "array");
+            } catch (err) {
+                log(`[자체 다국어 신경망 전환] 외부 웹사이트 무설치 번역 엔진으로 번역을 계속합니다.`);
+                res = await translateBatchWithNeuralFallback(uncachedTexts, targetLang);
+            }
+
+            if (!Array.isArray(res) || res.length === 0) {
+                res = await translateBatchWithNeuralFallback(uncachedTexts, targetLang);
+            }
+
             if (Array.isArray(res)) {
                 uncachedIndices.forEach((origIdx, i) => {
                     const transVal = (res[i] || "").trim();
@@ -1103,6 +1232,462 @@ ${JSON.stringify(uncachedTexts)}`;
             }
             return results;
         }
+
+        // ============================================================================
+        // [PDF 레이아웃 분석기 · 이미지/스캔본 변환기 · 터치/마우스 자막 스튜디오]
+        // ============================================================================
+        function analyzePdfPageLayout(textContent, viewport, syncMode = 'line') {
+            if (!textContent || !Array.isArray(textContent.items)) return [];
+            const pageW = viewport.width;
+            const pageH = viewport.height;
+            const rawItems = [];
+
+            for (const item of textContent.items) {
+                const str = (item.str || "").replace(/\s+/g, " ").trim();
+                if (!str) continue;
+
+                const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                const fontH = Math.max(8, Math.hypot(tx[2], tx[3]) || Math.abs(item.height) || 12);
+                const x = tx[4];
+                const yBottom = tx[5];
+                const yTop = yBottom - fontH;
+                const w = Math.max(fontH * 0.5, (item.width || str.length * fontH * 0.55) * viewport.scale);
+
+                if (x < 0 || x > pageW || yBottom < 0 || yTop > pageH) continue;
+                rawItems.push({
+                    str,
+                    x,
+                    yTop,
+                    yBottom,
+                    w,
+                    fontH
+                });
+            }
+
+            if (rawItems.length === 0) return [];
+
+            // 위에서 아래로, 왼쪽에서 오른쪽으로 정렬
+            rawItems.sort((a, b) => {
+                if (Math.abs(a.yTop - b.yTop) > Math.min(a.fontH, b.fontH) * 0.55) {
+                    return a.yTop - b.yTop;
+                }
+                return a.x - b.x;
+            });
+
+            // 같은 줄(Line) 세그먼트 병합 (다단 및 표 셀 간격 분리)
+            const lines = [];
+            for (const item of rawItems) {
+                let matchedLine = null;
+                for (let i = lines.length - 1; i >= 0; i--) {
+                    const candidate = lines[i];
+                    const vDiff = Math.abs(item.yTop - candidate.yTop);
+                    if (vDiff > Math.max(item.fontH, candidate.fontH) * 0.65) {
+                        if (item.yTop - candidate.yTop > 30) break;
+                        continue;
+                    }
+                    const hGap = item.x - (candidate.x + candidate.w);
+                    const maxAllowedGap = Math.max(item.fontH, candidate.fontH) * 3.2;
+                    if (hGap >= -item.fontH && hGap <= maxAllowedGap) {
+                        matchedLine = candidate;
+                        break;
+                    }
+                }
+
+                if (matchedLine) {
+                    const gap = item.x - (matchedLine.x + matchedLine.w);
+                    matchedLine.text += (gap > matchedLine.fontH * 0.22 ? " " : "") + item.str;
+                    const rightEdge = Math.max(matchedLine.x + matchedLine.w, item.x + item.w);
+                    matchedLine.x = Math.min(matchedLine.x, item.x);
+                    matchedLine.w = rightEdge - matchedLine.x;
+                    matchedLine.yTop = Math.min(matchedLine.yTop, item.yTop);
+                    matchedLine.yBottom = Math.max(matchedLine.yBottom, item.yBottom);
+                    matchedLine.fontH = Math.max(matchedLine.fontH, item.fontH);
+                } else {
+                    lines.push({
+                        text: item.str,
+                        x: item.x,
+                        yTop: item.yTop,
+                        yBottom: item.yBottom,
+                        w: item.w,
+                        fontH: item.fontH
+                    });
+                }
+            }
+
+            // 한국어가 포함된 유의미한 학습 문장만 필터링 (단순 기호 가, 나, ㄱ, ㄴ 및 쪽수 제외)
+            const koreanLines = lines.filter(line => {
+                const t = line.text.trim();
+                if (!/[가-힣]/.test(t)) return false;
+                const onlyHangul = t.replace(/[^가-힣]/g, "");
+                if (onlyHangul.length <= 1 && t.length <= 3) return false;
+                if (/^(준비물|수학익힘)\s*\d*/.test(t) && t.length <= 12) return false;
+                return true;
+            });
+
+            if (koreanLines.length === 0) return [];
+
+            const blocks = [];
+            if (syncMode === 'paragraph') {
+                const paragraphs = [];
+                for (const ln of koreanLines) {
+                    const prev = paragraphs[paragraphs.length - 1];
+                    if (
+                        prev &&
+                        Math.abs(ln.x - prev.x) < prev.fontH * 2.5 &&
+                        ln.yTop - prev.yBottom >= -4 &&
+                        ln.yTop - prev.yBottom <= prev.fontH * 1.45
+                    ) {
+                        prev.text += " " + ln.text.trim();
+                        prev.w = Math.max(prev.w, (ln.x + ln.w) - prev.x);
+                        prev.yBottom = Math.max(prev.yBottom, ln.yBottom);
+                    } else {
+                        paragraphs.push({ ...ln, text: ln.text.trim() });
+                    }
+                }
+
+                paragraphs.forEach((p, idx) => {
+                    const subFontPx = Math.max(8.5, Math.min(11.5, p.fontH * 0.74));
+                    const yAnchor = Math.min(pageH - subFontPx * 1.5, p.yBottom + 2);
+                    const availWidth = Math.max(pageW * 0.36, Math.min(pageW - p.x - 18, Math.max(p.w * 1.15, pageW * 0.45)));
+                    blocks.push({
+                        id: `pdf-p-${idx}-${Date.now()}`,
+                        koText: p.text,
+                        transText: "",
+                        xRatio: Math.max(0.03, Math.min(0.88, p.x / pageW)),
+                        yRatio: Math.max(0.02, Math.min(0.96, yAnchor / pageH)),
+                        wRatio: Math.max(0.22, Math.min(0.92, availWidth / pageW)),
+                        fontRatio: subFontPx / pageH
+                    });
+                });
+            } else {
+                koreanLines.forEach((ln, idx) => {
+                    const subFontPx = Math.max(8.2, Math.min(11.0, ln.fontH * 0.72));
+                    const yAnchor = Math.min(pageH - subFontPx * 1.4, ln.yBottom + 1.5);
+                    const availWidth = Math.max(pageW * 0.34, Math.min(pageW - ln.x - 16, Math.max(ln.w * 1.18, pageW * 0.42)));
+                    blocks.push({
+                        id: `pdf-l-${idx}-${Date.now()}`,
+                        koText: ln.text.trim(),
+                        transText: "",
+                        xRatio: Math.max(0.03, Math.min(0.88, ln.x / pageW)),
+                        yRatio: Math.max(0.02, Math.min(0.96, yAnchor / pageH)),
+                        wRatio: Math.max(0.22, Math.min(0.92, availWidth / pageW)),
+                        fontRatio: subFontPx / pageH
+                    });
+                });
+            }
+
+            return blocks;
+        }
+
+        async function convertImageFileToPdfAndCanvas(file) {
+            const dataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error("이미지 파일을 읽을 수 없습니다."));
+                reader.readAsDataURL(file);
+            });
+
+            const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => reject(new Error("이미지 디코딩에 실패했습니다."));
+                image.src = dataUrl;
+            });
+
+            const maxDim = 1100;
+            let dispW = img.naturalWidth || 794;
+            let dispH = img.naturalHeight || 1123;
+            if (dispW > maxDim || dispH > maxDim) {
+                const ratio = Math.min(maxDim / dispW, maxDim / dispH);
+                dispW = Math.round(dispW * ratio);
+                dispH = Math.round(dispH * ratio);
+            }
+
+            const previewCanvas = document.createElement('canvas');
+            previewCanvas.width = dispW;
+            previewCanvas.height = dispH;
+            const ctx = previewCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, dispW, dispH);
+            ctx.drawImage(img, 0, 0, dispW, dispH);
+
+            const { PDFDocument } = PDFLib;
+            const pdfDoc = await PDFDocument.create();
+            const jpegDataUrl = previewCanvas.toDataURL('image/jpeg', 0.94);
+            const jpgEmbed = await pdfDoc.embedJpg(jpegDataUrl);
+            const page = pdfDoc.addPage([dispW, dispH]);
+            page.drawImage(jpgEmbed, { x: 0, y: 0, width: dispW, height: dispH });
+            const pdfBytes = await pdfDoc.save();
+
+            return {
+                pdfBytesBuffer: pdfBytes.buffer,
+                previewCanvas,
+                dispW,
+                dispH
+            };
+        }
+
+        async function extractAndTranslatePageWithVision(canvas, targetLang, docType) {
+            const jpegUrl = canvas.toDataURL('image/jpeg', 0.82);
+            const base64Jpeg = jpegUrl.split(',')[1];
+            const contextGuide = getDocTypeInstruction(docType, targetLang);
+
+            const prompt = `이 학습지/교과서 페이지 이미지에서 한국어 문장(제목, 지시문, 본문, 문제 발문 등)을 찾아 ${targetLang}로 번역하고 각 문장 바로 아래 여백의 위치 비율(0.0~1.0)을 반환하세요.
+${contextGuide}
+
+반드시 아래 JSON 배열 형식으로만 응답하세요:
+[
+  {
+    "koText": "원본 한국어 문장",
+    "transText": "${targetLang} 번역문",
+    "xRatio": 0.12,
+    "yRatio": 0.18,
+    "wRatio": 0.75,
+    "fontRatio": 0.012
+  }
+]`;
+
+            const rawBlocks = await callGeminiVisionAPI(prompt, base64Jpeg);
+            if (Array.isArray(rawBlocks) && rawBlocks.length > 0) {
+                return rawBlocks
+                    .filter(b => b && b.transText)
+                    .map((b, idx) => ({
+                        id: `vis-${idx}-${Date.now()}`,
+                        koText: b.koText || "",
+                        transText: String(b.transText).trim(),
+                        xRatio: Math.max(0.03, Math.min(0.88, Number(b.xRatio) || 0.1)),
+                        yRatio: Math.max(0.03, Math.min(0.95, Number(b.yRatio) || (0.15 + idx * 0.08))),
+                        wRatio: Math.max(0.25, Math.min(0.9, Number(b.wRatio) || 0.75)),
+                        fontRatio: Math.max(0.009, Math.min(0.02, Number(b.fontRatio) || 0.011))
+                    }));
+            }
+
+            // 외부 호스팅에서 API 키 없이 스캔 이미지를 넣은 경우 직접 입력 가능한 기본 자막 블록 제공
+            const sampleNotice = await translateSingleTextFallback("여기를 클릭하여 번역 자막을 입력하거나 새 자막을 추가하세요.", resolveTargetLangCode(targetLang));
+            return [{
+                id: `vis-fallback-${Date.now()}`,
+                koText: "직접 편집 자막",
+                transText: sampleNotice || "클릭하여 자막을 수정하세요.",
+                xRatio: 0.10,
+                yRatio: 0.15,
+                wRatio: 0.78,
+                fontRatio: 0.013
+            }];
+        }
+
+        function getActiveStudioScale(pageEl) {
+            const st = pageEl.style.transform || "";
+            const m = st.match(/scale\(([^)]+)\)/);
+            return m ? (parseFloat(m[1]) || 1) : 1;
+        }
+
+        function createSubtitleBlockDOM(pageData, block, pageWrapper) {
+            const subEl = document.createElement('div');
+            subEl.className = `pdf-subtitle-item subtitle-style-${pdfSubtitleStyle.bgMode}`;
+            subEl.dataset.blockId = block.id;
+
+            function syncPositionAndStyle() {
+                subEl.style.left = `${block.xRatio * 100}%`;
+                subEl.style.top = `${block.yRatio * 100}%`;
+                subEl.style.width = `${block.wRatio * 100}%`;
+                const pxSize = Math.max(8.5, block.fontRatio * pageData.displayHeight * pdfSubtitleStyle.scale);
+                subEl.style.fontSize = `${pxSize}px`;
+                subEl.style.color = pdfSubtitleStyle.color;
+                subEl.classList.remove('subtitle-style-halo', 'subtitle-style-plain', 'subtitle-style-box');
+                subEl.classList.add(`subtitle-style-${pdfSubtitleStyle.bgMode}`);
+            }
+
+            const toolbar = document.createElement('div');
+            toolbar.className = 'sub-toolbar';
+            toolbar.innerHTML = `
+                <span class="cursor-move select-none">✥ 드래그 이동</span>
+                <span class="text-slate-400">|</span>
+                <button type="button" class="sub-del-btn text-red-300 hover:text-red-100 font-bold">✕ 삭제</button>
+            `;
+
+            const textSpan = document.createElement('div');
+            textSpan.className = 'sub-text outline-none';
+            textSpan.contentEditable = "true";
+            textSpan.spellcheck = false;
+            textSpan.textContent = block.transText;
+
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'sub-resize-handle';
+            resizeHandle.title = '좌우로 끌어 줄바꿈 폭 조절';
+
+            subEl.appendChild(toolbar);
+            subEl.appendChild(textSpan);
+            subEl.appendChild(resizeHandle);
+
+            textSpan.addEventListener('input', () => {
+                block.transText = textSpan.innerText.trim();
+            });
+
+            toolbar.querySelector('.sub-del-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                pageData.blocks = pageData.blocks.filter(b => b.id !== block.id);
+                subEl.remove();
+            });
+
+            // 드래그 이동 (마우스 & 모바일 터치 통합 Pointer Events)
+            let isDragging = false;
+            let startClientX = 0;
+            let startClientY = 0;
+            let startXRatio = 0;
+            let startYRatio = 0;
+
+            subEl.addEventListener('pointerdown', (e) => {
+                if (e.target === resizeHandle || e.target.closest('.sub-del-btn')) return;
+                document.querySelectorAll('.pdf-subtitle-item.selected-sub').forEach(el => {
+                    if (el !== subEl) el.classList.remove('selected-sub');
+                });
+                subEl.classList.add('selected-sub');
+
+                // 텍스트를 직접 더블클릭/포커스 편집 중일 때는 커서 이동 허용
+                if (document.activeElement === textSpan && e.target === textSpan) return;
+
+                isDragging = true;
+                startClientX = e.clientX;
+                startClientY = e.clientY;
+                startXRatio = block.xRatio;
+                startYRatio = block.yRatio;
+                subEl.setPointerCapture(e.pointerId);
+                e.preventDefault();
+            });
+
+            subEl.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                const scale = getActiveStudioScale(pageWrapper);
+                const dx = (e.clientX - startClientX) / (pageData.displayWidth * scale);
+                const dy = (e.clientY - startClientY) / (pageData.displayHeight * scale);
+                block.xRatio = Math.max(0.01, Math.min(0.92, startXRatio + dx));
+                block.yRatio = Math.max(0.01, Math.min(0.96, startYRatio + dy));
+                subEl.style.left = `${block.xRatio * 100}%`;
+                subEl.style.top = `${block.yRatio * 100}%`;
+            });
+
+            subEl.addEventListener('pointerup', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                try { subEl.releasePointerCapture(e.pointerId); } catch (err) {}
+                if (Math.hypot(e.clientX - startClientX, e.clientY - startClientY) < 4 && e.target === textSpan) {
+                    textSpan.focus();
+                }
+            });
+
+            // 우측 핸들로 가로 줄바꿈 폭 조절
+            let isResizing = false;
+            let resizeStartX = 0;
+            let startWRatio = 0;
+
+            resizeHandle.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                isResizing = true;
+                resizeStartX = e.clientX;
+                startWRatio = block.wRatio;
+                resizeHandle.setPointerCapture(e.pointerId);
+            });
+
+            resizeHandle.addEventListener('pointermove', (e) => {
+                if (!isResizing) return;
+                const scale = getActiveStudioScale(pageWrapper);
+                const dw = (e.clientX - resizeStartX) / (pageData.displayWidth * scale);
+                block.wRatio = Math.max(0.15, Math.min(0.96 - block.xRatio, startWRatio + dw));
+                subEl.style.width = `${block.wRatio * 100}%`;
+            });
+
+            resizeHandle.addEventListener('pointerup', (e) => {
+                if (!isResizing) return;
+                isResizing = false;
+                try { resizeHandle.releasePointerCapture(e.pointerId); } catch (err) {}
+            });
+
+            syncPositionAndStyle();
+            subEl._syncStyle = syncPositionAndStyle;
+            return subEl;
+        }
+
+        function refreshAllPdfSubtitlesStyle() {
+            document.querySelectorAll('#pdf-studio-pages-container .pdf-subtitle-item').forEach(el => {
+                if (typeof el._syncStyle === 'function') el._syncStyle();
+            });
+        }
+
+        function renderPdfStudio() {
+            const container = document.getElementById('pdf-studio-pages-container');
+            container.innerHTML = '';
+
+            pdfPagesModel.forEach((pageData) => {
+                const pageWrapper = document.createElement('div');
+                pageWrapper.className = 'pdf-studio-page';
+                pageWrapper.style.width = `${pageData.displayWidth}px`;
+                pageWrapper.style.height = `${pageData.displayHeight}px`;
+
+                const bgCanvas = document.createElement('canvas');
+                bgCanvas.className = 'bg-pdf-canvas';
+                bgCanvas.width = pageData.displayWidth;
+                bgCanvas.height = pageData.displayHeight;
+                const bgCtx = bgCanvas.getContext('2d');
+                bgCtx.drawImage(pageData.previewCanvas, 0, 0, pageData.displayWidth, pageData.displayHeight);
+                pageWrapper.appendChild(bgCanvas);
+
+                pageData.blocks.forEach(block => {
+                    const subEl = createSubtitleBlockDOM(pageData, block, pageWrapper);
+                    pageWrapper.appendChild(subEl);
+                });
+
+                container.appendChild(pageWrapper);
+            });
+
+            currentZoomMode = 'fit';
+            setTimeout(applyResponsivePreviewScale, 50);
+        }
+
+        // 자막 스튜디오 상단 컨트롤 바 이벤트 연결
+        document.getElementById('pdf-font-scale').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10) || 100;
+            pdfSubtitleStyle.scale = val / 100;
+            document.getElementById('pdf-font-scale-label').textContent = `${val}%`;
+            refreshAllPdfSubtitlesStyle();
+        });
+
+        document.querySelectorAll('.pdf-color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.pdf-color-btn').forEach(b => {
+                    b.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-600');
+                });
+                btn.classList.add('ring-2', 'ring-offset-2', 'ring-blue-600');
+                pdfSubtitleStyle.color = btn.getAttribute('data-color') || '#1d4ed8';
+                refreshAllPdfSubtitlesStyle();
+            });
+        });
+
+        document.getElementById('pdf-bg-style').addEventListener('change', (e) => {
+            pdfSubtitleStyle.bgMode = e.target.value || 'halo';
+            refreshAllPdfSubtitlesStyle();
+        });
+
+        document.getElementById('add-pdf-subtitle-btn').addEventListener('click', () => {
+            if (!pdfPagesModel || pdfPagesModel.length === 0) return;
+            const firstPage = pdfPagesModel[0];
+            const newBlock = {
+                id: `custom-sub-${Date.now()}`,
+                koText: "사용자 추가 자막",
+                transText: "새 자막 내용을 입력하세요",
+                xRatio: 0.15,
+                yRatio: 0.20,
+                wRatio: 0.65,
+                fontRatio: 0.013
+            };
+            firstPage.blocks.push(newBlock);
+            const firstPageWrapper = document.querySelector('#pdf-studio-pages-container .pdf-studio-page');
+            if (firstPageWrapper) {
+                const subEl = createSubtitleBlockDOM(firstPage, newBlock, firstPageWrapper);
+                firstPageWrapper.appendChild(subEl);
+                showToast("1쪽에 새 자막 박스가 추가되었습니다. 원하는 위치로 드래그하세요!", "success");
+            }
+        });
 
         // ============================================================================
         // [HWP / HWPX 파서 & A4 이중언어 자막 스튜디오 PDF 렌더러]
@@ -1539,7 +2124,12 @@ ${JSON.stringify(uncachedTexts)}`;
                     const pdfJsBuffer = arrayBuffer.slice(0);
                     rawPdfLibBuffer = arrayBuffer.slice(0);
 
-                    const pdf = await pdfjsLib.getDocument(pdfJsBuffer).promise;
+                    const pdf = await pdfjsLib.getDocument({
+                        data: pdfJsBuffer,
+                        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                        cMapPacked: true,
+                        standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/'
+                    }).promise;
                     const totalPages = pdf.numPages;
 
                     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
@@ -1606,6 +2196,7 @@ ${JSON.stringify(uncachedTexts)}`;
                 console.error(error);
                 log(`에러 발생: ${error.message}`);
                 showToast(`처리 중 오류가 발생했습니다: ${error.message}`, 'error');
+                setTimeout(() => resetWorkspaceToHome(), 2200);
             }
         }
 
@@ -1652,6 +2243,102 @@ ${JSON.stringify(uncachedTexts)}`;
                 .trim();
         }
 
+        // 외부 웹사이트 배포 시 API 키가 없어도 PPT/텍스트를 2~3쪽 이중언어 학습지로 구성해주는 지능형 요약·번역 폴백 엔진
+        async function buildWorksheetWithNeuralFallback(text, targetLang, rawTitle) {
+            const cleanTitleKo = cleanTopicName(rawTitle || "오늘의 핵심 배움 학습지")
+                .replace(/^[0-9\-_]+/, "")
+                .trim() || "오늘의 핵심 배움 학습지";
+
+            const rawLines = text
+                .replace(/\[슬라이드\s*\d+\]/g, "\n")
+                .split(/[\r\n]+|(?<=[\.!\?다요죠함음])\s+/)
+                .map(s => s.replace(/\s+/g, " ").trim())
+                .filter(s => s.length >= 8 && /[가-힣]/.test(s));
+
+            const uniqueSentences = [];
+            for (const s of rawLines) {
+                if (!uniqueSentences.some(prev => prev.includes(s) || s.includes(prev))) {
+                    uniqueSentences.push(s);
+                }
+            }
+
+            while (uniqueSentences.length < 8) {
+                const idx = uniqueSentences.length + 1;
+                uniqueSentences.push(`${cleanTitleKo}의 핵심 개념과 중요한 표현(${idx})을 차근차근 읽으며 함께 익혀 보아요.`);
+            }
+
+            const selectedKoSentences = uniqueSentences.slice(0, 8);
+            const goalKo = `${cleanTitleKo}의 핵심 내용을 이해하고 상황에 맞게 올바르게 활용할 수 있어요.`;
+
+            // 핵심 어휘 4개 추출
+            const wordCandidates = (text.match(/[가-힣]{2,6}/g) || [])
+                .filter(w => !/^(슬라이드|우리가|그리고|하지만|따라서|있어요|합니다|입니다|해보세요|알아봅시다)$/.test(w));
+            const freqMap = new Map();
+            wordCandidates.forEach(w => freqMap.set(w, (freqMap.get(w) || 0) + 1));
+            const topWords = Array.from(freqMap.entries())
+                .sort((a, b) => b[1] - a[1])
+                .map(e => e[0])
+                .slice(0, 4);
+
+            while (topWords.length < 4) {
+                const defaults = ["핵심 개념", "중요 표현", "학습 활동", "실생활 활용"];
+                topWords.push(defaults[topWords.length]);
+            }
+
+            const vocabDescsKo = topWords.map((w, i) => {
+                const matchSent = selectedKoSentences.find(s => s.includes(w)) || selectedKoSentences[i % selectedKoSentences.length];
+                return matchSent.length > 70 ? matchSent.slice(0, 68) + "..." : matchSent;
+            });
+
+            const quizKoList = [
+                `1. 오늘 배운 '${cleanTitleKo}'의 핵심 내용을바르게 이해하고 설명할 수 있나요? ( O / X )`,
+                `2. ${selectedKoSentences[0].slice(0, 55)} ( O / X )`,
+                `3. 배운 내용을 일상생활이나 학교 수업 시간에 알맞게 활용할 수 있습니다. ( O / X )`
+            ];
+
+            // 모든 텍스트 일괄 다국어 신경망 번역
+            const allToTranslate = [
+                cleanTitleKo,
+                goalKo,
+                ...selectedKoSentences,
+                ...topWords,
+                ...vocabDescsKo,
+                ...quizKoList
+            ];
+
+            const translatedAll = await translateBatchWithNeuralFallback(allToTranslate, targetLang);
+            let cursor = 0;
+            const cleanTitleTrans = translatedAll[cursor++] || "";
+            const goalTrans = translatedAll[cursor++] || "";
+            const summaryTrans = selectedKoSentences.map(() => translatedAll[cursor++] || "");
+            const wordsTrans = topWords.map(() => translatedAll[cursor++] || "");
+            const descsTrans = vocabDescsKo.map(() => translatedAll[cursor++] || "");
+            const quizTrans = quizKoList.map(() => translatedAll[cursor++] || "");
+
+            return {
+                cleanTitleKo,
+                cleanTitleTrans,
+                goalKo,
+                goalTrans,
+                summaryItems: selectedKoSentences.map((ko, i) => ({
+                    ko,
+                    trans: summaryTrans[i] || ""
+                })),
+                vocabItems: topWords.map((w, i) => ({
+                    wordKo: w,
+                    wordTrans: wordsTrans[i] || "",
+                    descKo: vocabDescsKo[i],
+                    descTrans: descsTrans[i] || ""
+                })),
+                quizItems: quizKoList.map((qKo, i) => ({
+                    qKo,
+                    qTrans: quizTrans[i] || "",
+                    answerKo: "O",
+                    answerTrans: "O"
+                }))
+            };
+        }
+
         async function summarizeTextsToWorksheet(text, targetLang, rawTitle) {
             if (!text) return null;
             const fallbackTitle = cleanTopicName(rawTitle || "오늘의 배움 학습지");
@@ -1692,7 +2379,15 @@ ${JSON.stringify(uncachedTexts)}`;
   ]
 }`;
 
-            return await callGeminiAPI(prompt, "object");
+            try {
+                const geminiResult = await callGeminiAPI(prompt, "object");
+                if (geminiResult && Array.isArray(geminiResult.summaryItems) && geminiResult.summaryItems.length > 0) {
+                    return geminiResult;
+                }
+            } catch (err) {
+                log(`[자체 학습지 생성 엔진 가동] 외부 웹사이트 무설치 요약·번역 모드로 학습지를 조판합니다.`);
+            }
+            return await buildWorksheetWithNeuralFallback(text, targetLang, rawTitle);
         }
 
         function createWorksheetHeaderHTML(data, pageNum, totalPages) {
@@ -1939,6 +2634,7 @@ ${JSON.stringify(uncachedTexts)}`;
                 console.error(error);
                 log(`에러 발생: ${error.message}`);
                 showToast(`오류: ${error.message}`, 'error');
+                setTimeout(() => resetWorkspaceToHome(), 2200);
             }
         }
 
@@ -2006,55 +2702,74 @@ ${JSON.stringify(uncachedTexts)}`;
             } catch (err) {
                 console.error(err);
                 showToast(`오류: ${err.message}`, 'error');
+                setTimeout(() => resetWorkspaceToHome(), 2200);
             }
         });
 
         async function callGeminiAPI(prompt, returnType = "array") {
             return runWithConcurrencyLimit(async () => {
-                const apiKey = userCustomApiKey || "";
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const apiKey = (userCustomApiKey || "").trim();
+                // 외부 웹사이트에서 개인 API 키를 입력한 경우 범용 정식 모델도 순차 시도하도록 구성
+                const candidateModels = apiKey
+                    ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3-flash-preview']
+                    : ['gemini-3-flash-preview'];
 
                 const payload = {
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: { responseMimeType: "application/json" }
                 };
 
-                let retries = 4;
-                let delay = 1000;
-                while (retries > 0) {
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        const result = await response.json();
-                        if (result.error) throw new Error(result.error.message);
-                        if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
-                            const jsonStr = cleanJSONString(result.candidates[0].content.parts[0].text);
-                            return JSON.parse(jsonStr);
-                        }
-                        throw new Error("응답 형식 오류");
-                    } catch (error) {
-                        retries--;
-                        if (retries > 0) {
-                            // 다중 접속 시 동시 재시도 충돌(Thundering Herd)을 막기 위한 랜덤 지터(Jitter) 지연
-                            const jitter = Math.floor(Math.random() * 450);
-                            await new Promise(resolve => setTimeout(resolve, delay + jitter));
-                            delay *= 2;
-                        } else {
-                            throw error;
+                let lastError = null;
+                for (const modelName of candidateModels) {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    let retries = 2;
+                    let delay = 900;
+
+                    while (retries > 0) {
+                        try {
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            const result = await response.json();
+                            if (result.error) {
+                                const msg = result.error.message || "API Error";
+                                // 외부 웹사이트에서 API 키가 없을 때 발생하는 에러는 즉시 폴백 엔진으로 넘김
+                                if (response.status === 400 || response.status === 403 || /unregistered callers|API key/i.test(msg)) {
+                                    throw new Error("AUTH_FALLBACK:" + msg);
+                                }
+                                throw new Error(msg);
+                            }
+                            if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+                                const jsonStr = cleanJSONString(result.candidates[0].content.parts[0].text);
+                                return JSON.parse(jsonStr);
+                            }
+                            throw new Error("응답 형식 오류");
+                        } catch (error) {
+                            lastError = error;
+                            if (String(error.message).startsWith("AUTH_FALLBACK:")) {
+                                break;
+                            }
+                            retries--;
+                            if (retries > 0) {
+                                const jitter = Math.floor(Math.random() * 350);
+                                await new Promise(resolve => setTimeout(resolve, delay + jitter));
+                                delay *= 2;
+                            }
                         }
                     }
                 }
-                return returnType === "array" ? [] : null;
+                throw lastError || new Error("AI API 호출 실패");
             });
         }
 
         async function callGeminiVisionAPI(prompt, base64Jpeg) {
             return runWithConcurrencyLimit(async () => {
-                const apiKey = userCustomApiKey || "";
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const apiKey = (userCustomApiKey || "").trim();
+                const candidateModels = apiKey
+                    ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3-flash-preview']
+                    : ['gemini-3-flash-preview'];
 
                 const payload = {
                     contents: [{
@@ -2067,9 +2782,8 @@ ${JSON.stringify(uncachedTexts)}`;
                     generationConfig: { responseMimeType: "application/json" }
                 };
 
-                let retries = 4;
-                let delay = 1000;
-                while (retries > 0) {
+                for (const modelName of candidateModels) {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
                     try {
                         const response = await fetch(url, {
                             method: 'POST',
@@ -2077,21 +2791,10 @@ ${JSON.stringify(uncachedTexts)}`;
                             body: JSON.stringify(payload)
                         });
                         const result = await response.json();
-                        if (result.error) throw new Error(result.error.message);
-                        if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+                        if (!result.error && result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
                             return JSON.parse(cleanJSONString(result.candidates[0].content.parts[0].text));
                         }
-                        throw new Error("비전 응답 형식 오류");
-                    } catch (err) {
-                        retries--;
-                        if (retries > 0) {
-                            const jitter = Math.floor(Math.random() * 450);
-                            await new Promise(r => setTimeout(r, delay + jitter));
-                            delay *= 2;
-                        } else {
-                            return [];
-                        }
-                    }
+                    } catch (err) {}
                 }
                 return [];
             });

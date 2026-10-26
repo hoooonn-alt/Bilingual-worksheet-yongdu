@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="이중언어 에듀">
+    <title>다문화 이음 AI - 범용 이중언어 교과서·학습지 스튜디오</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cfb/1.2.2/cfb.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Noto+Sans:wght@500;700&family=Noto+Sans+KR:wght@500;700&family=Noto+Sans+SC:wght@500;700&family=Noto+Sans+JP:wght@500;700&family=Noto+Sans+Devanagari:wght@500;700&family=Noto+Sans+Arabic:wght@500;700&family=Noto+Sans+Thai:wght@500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --font-multilingual: 'Pretendard', 'Noto Sans KR', 'Noto Sans', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans Devanagari', 'Noto Sans Thai', 'Noto Sans Arabic', sans-serif;
+        }
+        body {
+            font-family: var(--font-multilingual);
+            background-color: #f1f5f9;
+            color: #0f172a;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .spinner {
+            border: 3px solid rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            border-top: 3px solid #2563eb;
+            width: 22px;
+            height: 22px;
+            animation: spin 0.9s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .nav-tab.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .mobile-nav-btn.active {
+            color: #2563eb;
+            font-weight: 800;
+        }
+        .mobile-nav-btn.active .nav-indicator {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+        .dropzone-active {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+            transform: scale(1.01);
+        }
+
+        .studio-scale-outer {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+        }
+        .pdf-studio-page {
+            position: relative;
+            margin: 0 auto 24px auto;
+            background: #ffffff;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            overflow: hidden;
+            user-select: none;
+            transform-origin: top center;
+            transition: transform 0.15s ease-out;
+        }
+        .pdf-studio-page canvas.bg-pdf-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .pdf-subtitle-item {
+            position: absolute;
+            z-index: 20;
+            cursor: grab;
+            padding: 2px 4px;
+            border-radius: 4px;
+            border: 1.5px dashed transparent;
+            transition: border-color 0.15s, background-color 0.15s;
+            line-height: 1.24;
+            word-break: keep-all;
+            overflow-wrap: break-word;
+            font-family: var(--font-multilingual);
+            font-weight: 600;
+            touch-action: none;
+        }
+        .pdf-subtitle-item:hover,
+        .pdf-subtitle-item:focus-within,
+        .pdf-subtitle-item.selected-sub {
+            border-color: #2563eb;
+            background-color: rgba(239, 246, 255, 0.72);
+            z-index: 35;
+        }
+        .pdf-subtitle-item:active {
+            cursor: grabbing;
+        }
+        .subtitle-style-halo .sub-text {
+            text-shadow:
+                -1.3px -1.3px 0 rgba(255,255,255,0.97),
+                 1.3px -1.3px 0 rgba(255,255,255,0.97),
+                -1.3px  1.3px 0 rgba(255,255,255,0.97),
+                 1.3px  1.3px 0 rgba(255,255,255,0.97),
+                 0px    0px   3px rgba(255,255,255,0.95);
+        }
+        .subtitle-style-plain .sub-text {
+            text-shadow: none;
+        }
+        .subtitle-style-box {
+            background-color: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(147, 197, 253, 0.8);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .sub-toolbar {
+            display: none;
+            position: absolute;
+            top: -28px;
+            left: 0;
+            background: #0f172a;
+            color: #ffffff;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 11px;
+            gap: 8px;
+            align-items: center;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+            z-index: 45;
+        }
+        .pdf-subtitle-item:hover .sub-toolbar,
+        .pdf-subtitle-item:focus-within .sub-toolbar,
+        .pdf-subtitle-item.selected-sub .sub-toolbar {
+            display: inline-flex;
+        }
+        .sub-resize-handle {
+            display: none;
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 28px;
+            background: #2563eb;
+            border: 2px solid #ffffff;
+            border-radius: 4px;
+            cursor: ew-resize;
+            z-index: 45;
+            touch-action: none;
+        }
+        .pdf-subtitle-item:hover .sub-resize-handle,
+        .pdf-subtitle-item:focus-within .sub-resize-handle,
+        .pdf-subtitle-item.selected-sub .sub-resize-handle {
+            display: block;
+        }
+
+        .a4-scale-slot {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .a4-sheet {
+            width: 794px;
+            min-height: 1123px;
+            background: #ffffff;
+            padding: 56px 56px 48px 56px;
+            box-sizing: border-box;
+            font-family: var(--font-multilingual);
+            color: #111827;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.12);
+            border: 1px solid #cbd5e1;
+            word-break: keep-all;
+            overflow-wrap: break-word;
+            transform-origin: top center;
+            flex-shrink: 0;
+        }
+        .worksheet-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 28px;
+            page-break-inside: avoid;
+        }
+        .item-num {
+            border: 2.5px solid #111827;
+            color: #111827;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 800;
+            flex-shrink: 0;
+            margin-top: 3px;
+            background: #ffffff;
+        }
+        .item-ko {
+            font-size: 1.32rem;
+            color: #111827;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.55;
+            word-break: keep-all;
+            overflow-wrap: break-word;
+        }
+        .item-trans {
+            font-size: 1.12rem;
+            color: #4b5563;
+            font-weight: 500;
+            line-height: 1.5;
+            word-break: normal;
+            overflow-wrap: break-word;
+        }
+
+        .ws-section-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1.5px solid #bfdbfe;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+        .ws-vocab-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .ws-vocab-card {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: #f8fafc;
+        }
+        .ws-quiz-box {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            background: #ffffff;
+        }
+        .style-switch-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            #worksheet-pages-container, #worksheet-pages-container * { visibility: visible; }
+            .a4-sheet { box-shadow: none; border: none; margin: 0; transform: none !important; page-break-after: always; }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col pb-20 md:pb-10">
+
+    <!-- 커스텀 토스트 알림창 (alert 대체) -->
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[92%] max-w-md"></div>
+
+    <!-- 상단 앱 헤더 (데스크톱 & 모바일 공통) -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md flex-shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
+                </div>
+                <div class="truncate">
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base sm:text-xl font-extrabold text-slate-900 truncate">다문화 이음 AI 스튜디오</h1>
+                        <span class="hidden sm:inline-block text-[11px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">PDF · HWP · PPT</span>
+                        <span id="multiuser-status-badge" class="hidden md:inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            다중접속 분산모드
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 truncate">교과서(PDF·HWP)·학습지·PPT·알림장 다국어 PDF 자동 발행 웹앱</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <button id="concurrency-modal-btn" type="button" class="px-2.5 sm:px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1">
+                    <span>⚡</span>
+                    <span class="hidden sm:inline">접속·서버 설정</span>
+                </button>
+                <button id="guide-modal-btn" type="button" class="px-2.5 sm:px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>가이드</span>
+                </button>
+                <button id="header-reset-btn" type="button" class="hidden px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs sm:text-sm font-bold transition-colors">
+                    새 작업
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 pt-4 sm:pt-6">
+
+        <!-- 데스크톱 & 태블릿 상단 모드 전환 탭 (모바일에서는 하단 네비게이션 바와 연동) -->
+        <div id="top-mode-tabs" class="grid grid-cols-3 gap-1.5 sm:gap-2 bg-slate-200/80 p-1.5 rounded-2xl mb-5">
+            <button id="tab-pdf" type="button" class="nav-tab active py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5">
+                <span>📄</span>
+                <span class="truncate">1. 이중언어 교과서·학습지 (PDF·HWP)</span>
+            </button>
+            <button id="tab-ppt" type="button" class="nav-tab py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5">
+                <span>✨</span>
+                <span class="truncate">2. PPT 요약 학습지</span>
+            </button>
+            <button id="tab-text" type="button" class="nav-tab py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5">
+                <span>✍️</span>
+                <span class="truncate">3. 알림장·지문 학습지</span>
+            </button>
+        </div>
+
+        <!-- 메인 카드 컨테이너 -->
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200/90 p-4 sm:p-8">
+
+            <div id="language-section" class="mb-6 space-y-5">
+                <div>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                        <label class="text-sm sm:text-base font-extrabold text-slate-800 flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">1</span>
+                            번역·병기할 대상 언어 선택
+                        </label>
+                        <span class="text-xs text-slate-500 font-medium">💡 목록에 없는 언어도 '직접 입력'으로 전 세계 모든 언어 지원</span>
+                    </div>
+
+                    <!-- 자주 쓰는 12개 다문화 언어 그리드 -->
+                    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="러시아어" class="peer sr-only" checked>
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇷🇺 러시아어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="베트남어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇻🇳 베트남어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="중국어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇨🇳 중국어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="영어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇺🇸 영어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="네팔어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇳🇵 네팔어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="몽골어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇲🇳 몽골어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="우즈베크어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇺🇿 우즈베크어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="일본어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇯🇵 일본어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="필리핀어(타갈로그어)" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇵🇭 필리핀어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="태국어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇹🇭 태국어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="카자흐어" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-slate-200 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🇰🇿 카자흐어</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="lang" value="custom" id="lang-custom-radio" class="peer sr-only">
+                            <div class="p-2.5 text-center rounded-xl border-2 border-dashed border-slate-300 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 peer-checked:text-indigo-700 font-bold text-xs sm:text-sm transition-all hover:bg-slate-50">🌍 기타 직접입력</div>
+                        </label>
+                    </div>
+
+                    <!-- 기타 언어 직접 입력창 -->
+                    <div id="custom-lang-wrapper" class="hidden mt-3 bg-indigo-50/70 p-3 rounded-xl border border-indigo-200 flex items-center gap-3">
+                        <span class="text-xs font-bold text-indigo-800 whitespace-nowrap">🌐 언어명 입력:</span>
+                        <input type="text" id="custom-lang-input" placeholder="예: 스페인어, 아랍어, 인도네시아어, 크메르어, 미얀마어 등" class="w-full rounded-lg border border-indigo-300 px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white">
+                    </div>
+                </div>
+
+                <div id="pdf-options-panel" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">📚 문서 성격 (AI 맞춤형 번역 톤)</label>
+                        <select id="pdf-doc-type" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 focus:border-blue-500 focus:outline-none">
+                            <option value="general">🏫 전 과목 교과서·일반 학습지 (개념·지시문 친절 번역)</option>
+                            <option value="exam">📝 단원평가·수행평가 시험지 (정답 힌트 없이 발문만 정확 번역)</option>
+                            <option value="notice">💌 가정통신문·학부모 안내장 (학부모 대상 정중한 안내 번역)</option>
+                            <option value="reading">📖 국어·사회·과학 긴 지문 (문장 구조를 살린 자연스러운 독해 번역)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">🎯 자막 위치 싱크 방식</label>
+                        <select id="pdf-sync-mode" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 focus:border-blue-500 focus:outline-none">
+                            <option value="line">줄 단위 행간 밀착 병기 (각 한글 줄 바로 아래 배치 - 추천)</option>
+                            <option value="paragraph">문단 단위 하단 병기 (문단 마지막 줄 아래에 묶어서 배치)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pdf-section" class="mode-section block">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2.5">
+                    <label class="text-sm sm:text-base font-extrabold text-slate-800 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
+                        교과서·학습지 파일 업로드 (PDF · HWP · HWPX · 사진)
+                    </label>
+                    <span class="text-xs font-bold text-blue-600">📌 HWP·PDF·사진 모두 다국어 자막 병기 후 인쇄용 PDF로 통합 발행됩니다</span>
+                </div>
+
+                <div id="pdf-upload-box" class="border-2 border-dashed border-blue-300 rounded-2xl p-6 sm:p-10 text-center hover:bg-blue-50/60 transition-all cursor-pointer bg-slate-50/50">
+                    <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-1.5 mb-2">
+                        <span class="text-[11px] font-extrabold bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full">PDF 원본</span>
+                        <span class="text-[11px] font-extrabold bg-sky-100 text-sky-800 px-2.5 py-0.5 rounded-full">아래아한글 (.hwp / .hwpx)</span>
+                        <span class="text-[11px] font-extrabold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full">학습지 사진·스캔본</span>
+                    </div>
+                    <h3 class="text-base sm:text-lg font-extrabold text-slate-800 mb-1">여기를 탭하여 PDF, 한글(HWP/HWPX) 또는 학습지 이미지 선택</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">학교에서 바로 쓰시는 <strong>한글(.hwp, .hwpx) 학습지·시험지·가정통신문</strong>이나 <strong>PDF 교과서</strong>를 넣으면, 각 한글 문장 바로 아래에 다국어 자막을 병기하여 <strong>인쇄용 PDF 파일</strong>로 만들어 드립니다.</p>
+
+                    <div class="mt-5 flex flex-wrap justify-center gap-2.5">
+                        <button type="button" id="btn-select-pdf" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm flex items-center gap-1.5">
+                            <span>📂 PDF / HWP(한글) / 이미지 선택</span>
+                        </button>
+                        <button type="button" id="btn-camera-capture" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-sm flex items-center gap-1.5">
+                            <span>📸 스마트폰 카메라로 학습지 촬영</span>
+                        </button>
+                    </div>
+
+                    <input type="file" id="pdf-input" accept=".pdf,.hwp,.hwpx,application/pdf,application/x-hwp,application/haansofthwp,image/jpeg,image/png,image/webp" class="hidden" />
+                    <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" />
+                </div>
+            </div>
+
+            <div id="ppt-section" class="mode-section hidden">
+                <div class="flex items-center justify-between mb-2.5">
+                    <label class="text-sm sm:text-base font-extrabold text-slate-800 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center">2</span>
+                        수업용 PPTX 파일 업로드
+                    </label>
+                    <span class="text-xs font-semibold text-amber-700">2~3쪽 A4 이중언어 요약 학습지 자동 조판</span>
+                </div>
+
+                <div id="ppt-upload-box" class="border-2 border-dashed border-amber-300 rounded-2xl p-6 sm:p-10 text-center hover:bg-amber-50/60 transition-all cursor-pointer bg-slate-50/50">
+                    <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5L18.5 7H20"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-base sm:text-lg font-extrabold text-slate-800 mb-1">여기를 탭하여 수업용 PPT(.pptx) 선택</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">슬라이드의 핵심 내용을 추출하여 학생 눈높이에 맞춘 2~3쪽 분량의 A4 이중언어 학습지(핵심 문장·어휘·확인 문제)로 만들어 줍니다.</p>
+                    <div class="mt-5">
+                        <span class="inline-flex px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm shadow-sm">📂 PPTX 파일 찾아보기</span>
+                    </div>
+                    <input type="file" id="ppt-input" accept=".pptx" class="hidden" />
+                </div>
+            </div>
+
+            <div id="text-section" class="mode-section hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <label class="text-sm sm:text-base font-extrabold text-slate-800 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center">2</span>
+                        파일 없이 텍스트로 즉시 학습지·안내장 만들기
+                    </label>
+                    <div class="flex gap-1.5">
+                        <button type="button" id="sample-lesson-btn" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg font-bold">예시 1: 수업 핵심 정리</button>
+                        <button type="button" id="sample-notice-btn" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg font-bold">예시 2: 학부모 알림장</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">📌 수업 주제 또는 안내장 제목</label>
+                        <input type="text" id="direct-title-input" placeholder="예: 5학년 과학 - 태양계와 별 / 현장체험학습 안내 알림장" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-semibold focus:outline-none focus:border-emerald-600 bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">📝 본문 내용 입력 (교과서 지문, 수업 노트, 알림장 내용 등을 자유롭게 붙여넣으세요)</label>
+                        <textarea id="direct-body-input" rows="5" placeholder="여기에 한국어 수업 내용이나 알림장 문구를 입력하면, AI가 다문화 학생이 이해하기 쉬운 체계적인 2~3쪽 이중언어 학습지(또는 안내장)로 자동 구성해 줍니다." class="w-full rounded-xl border border-slate-300 p-3.5 text-sm leading-relaxed focus:outline-none focus:border-emerald-600 bg-white"></textarea>
+                    </div>
+                    <button type="button" id="generate-direct-btn" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2">
+                        <span>✨ AI 이중언어 학습지로 변환하기</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="status-section" class="hidden py-6 sm:py-8">
+                <div class="flex items-center justify-between text-blue-800 font-bold mb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="spinner"></div>
+                        <span id="status-text" class="text-sm sm:text-base">AI가 문서를 분석하고 있습니다...</span>
+                    </div>
+                    <span id="progress-percent" class="text-blue-600 text-sm sm:text-base">0%</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-3.5 shadow-inner overflow-hidden">
+                    <div id="progress-bar" class="bg-gradient-to-r from-blue-600 to-indigo-600 h-3.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <div class="mt-4 bg-slate-900 text-slate-200 rounded-2xl p-4 max-h-40 overflow-y-auto text-xs font-mono leading-relaxed" id="log-console">
+                    [시스템] 다문화 이음 AI 엔진 준비 완료...
+                </div>
+            </div>
+
+            <div id="success-section" class="hidden pt-2">
+                <!-- 상단 완료 배너 및 내보내기(PDF / 이미지 / 모바일 공유) 버튼 바 -->
+                <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-slate-50 border border-blue-200 rounded-2xl p-4 sm:p-5 mb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div class="flex items-start sm:items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-base sm:text-xl font-extrabold text-slate-900" id="success-title">변환 완료!</h3>
+                            <p class="text-xs sm:text-sm text-slate-600 mt-0.5" id="success-desc">화면을 터치하거나 클릭하여 내용을 자유롭게 수정한 뒤 저장·공유하세요.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="download-btn" type="button" class="flex-1 sm:flex-initial justify-center px-4 sm:px-5 py-3 font-extrabold rounded-xl shadow-md text-white bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm transition-all flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span id="download-btn-text">인쇄용 PDF 저장</span>
+                        </button>
+                        <button id="download-img-btn" type="button" class="flex-1 sm:flex-initial justify-center px-4 py-3 font-bold rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs sm:text-sm transition-all flex items-center gap-1.5">
+                            <span>🖼️ 이미지(PNG) 저장</span>
+                        </button>
+                        <button id="mobile-share-btn" type="button" class="px-4 py-3 font-bold rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs sm:text-sm transition-all flex items-center gap-1.5">
+                            <span>📲 바로 공유</span>
+                        </button>
+                        <button id="reload-btn" type="button" class="px-3.5 py-3 font-bold rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs sm:text-sm transition-all">
+                            다른 파일
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl mb-4 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-blue-300">🔍 화면 배율:</span>
+                        <button type="button" id="zoom-fit-btn" class="px-2.5 py-1 rounded-lg bg-blue-600 font-bold hover:bg-blue-500">화면 맞춤(자동)</button>
+                        <button type="button" id="zoom-out-btn" class="px-2 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 font-bold">-</button>
+                        <span id="zoom-level-text" class="font-mono font-bold min-w-[44px] text-center">100%</span>
+                        <button type="button" id="zoom-in-btn" class="px-2 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 font-bold">+</button>
+                    </div>
+                    <div class="text-slate-300 hidden sm:block">
+                        💡 모바일/태블릿에서도 손가락으로 자막을 드래그하거나 탭하여 수정할 수 있습니다.
+                    </div>
+                </div>
+
+                <div id="pdf-studio-controls" class="hidden mb-4 bg-slate-100 p-3.5 sm:p-4 rounded-2xl border border-slate-200 text-left space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-200 pb-3">
+                        <div>
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">터치 & 마우스 자막 스튜디오</span>
+                            <h4 class="text-xs sm:text-sm font-bold text-slate-800 mt-1">자막을 손가락/마우스로 끌어 위치를 옮기거나, 탭하여 문구를 직접 수정하세요.</h4>
+                        </div>
+                        <button id="add-pdf-subtitle-btn" type="button" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all self-start sm:self-auto">
+                            ➕ 새 자막 추가
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="bg-white p-3 rounded-xl border border-slate-200">
+                            <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span>🔠 자막 글자 크기</span>
+                                <span id="pdf-font-scale-label" class="text-blue-600">100%</span>
+                            </div>
+                            <input id="pdf-font-scale" type="range" min="70" max="145" value="100" step="5" class="w-full accent-blue-600 cursor-pointer">
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">🎨 자막 글자 색상</label>
+                            <div class="flex items-center gap-2.5">
+                                <button type="button" data-color="#1d4ed8" class="pdf-color-btn w-6 h-6 rounded-full bg-blue-700 ring-2 ring-offset-2 ring-blue-600"></button>
+                                <button type="button" data-color="#0f172a" class="pdf-color-btn w-6 h-6 rounded-full bg-slate-900"></button>
+                                <button type="button" data-color="#047857" class="pdf-color-btn w-6 h-6 rounded-full bg-emerald-700"></button>
+                                <button type="button" data-color="#7e22ce" class="pdf-color-btn w-6 h-6 rounded-full bg-purple-700"></button>
+                                <button type="button" data-color="#b91c1c" class="pdf-color-btn w-6 h-6 rounded-full bg-red-700"></button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">✨ 자막 가독성 모드</label>
+                            <select id="pdf-bg-style" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                                <option value="halo" selected>미세 흰색 외곽선 (원본 안 가리고 선명)</option>
+                                <option value="plain">순수 투명 글자 (배경·외곽선 없음)</option>
+                                <option value="box">반투명 흰색 배경 박스 (복잡한 배경 위)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ppt-preview-controls" class="hidden mb-4 bg-slate-100 p-3.5 sm:p-4 rounded-2xl border border-slate-200 text-left">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div>
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">A4 학습지 레이아웃 & 문구 직접 편집</span>
+                            <h4 class="text-xs sm:text-sm font-bold text-slate-800 mt-1">원하는 학습지 양식을 선택하세요. 모든 텍스트는 탭하여 직접 수정할 수 있습니다.</h4>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button id="style-btn-classic" type="button" class="style-switch-btn active px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 bg-white text-slate-700 transition-all">
+                                📄 핵심 문장 집중형 (2쪽)
+                            </button>
+                            <button id="style-btn-workbook" type="button" class="style-switch-btn px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 bg-white text-slate-700 transition-all">
+                                📘 표준 워크북형 (어휘+문장+퀴즈 3쪽)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PDF 자막 편집 스튜디오 뷰어 -->
+                <div id="pdf-studio-wrapper" class="hidden bg-slate-200/80 p-2 sm:p-6 rounded-2xl border border-slate-300">
+                    <div id="pdf-studio-pages-container" class="studio-scale-outer"></div>
+                </div>
+
+                <!-- PPT & 텍스트 A4 학습지 미리보기 뷰어 -->
+                <div id="worksheet-preview-wrapper" class="hidden bg-slate-200/80 p-2 sm:p-6 rounded-2xl border border-slate-300">
+                    <div id="worksheet-pages-container" class="studio-scale-outer"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 flex justify-around items-center shadow-lg">
+        <button type="button" data-mode="pdf" class="mobile-nav-btn active flex-1 flex flex-col items-center py-1 text-slate-500">
+            <span class="nav-indicator px-3 py-0.5 rounded-full text-sm mb-0.5">📄</span>
+            <span class="text-[11px]">PDF·HWP 자막</span>
+        </button>
+        <button type="button" data-mode="ppt" class="mobile-nav-btn flex-1 flex flex-col items-center py-1 text-slate-500">
+            <span class="nav-indicator px-3 py-0.5 rounded-full text-sm mb-0.5">✨</span>
+            <span class="text-[11px]">PPT 요약학습지</span>
+        </button>
+        <button type="button" data-mode="text" class="mobile-nav-btn flex-1 flex flex-col items-center py-1 text-slate-500">
+            <span class="nav-indicator px-3 py-0.5 rounded-full text-sm mb-0.5">✍️</span>
+            <span class="text-[11px]">알림장·지문</span>
+        </button>
+    </nav>
+
+    <!-- 다중 접속 & 웹사이트 서버 설정 모달 -->
+    <div id="concurrency-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[88vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                    <h3 class="text-lg font-extrabold text-slate-900">⚡ 다중 사용자 접속 & 배포 관리</h3>
+                </div>
+                <button id="close-concurrency-btn" type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-600">✕</button>
+            </div>
+
+            <div class="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                    <div class="font-extrabold text-emerald-900 mb-1">✅ 무서버(Serverless) 클라이언트 분산 아키텍처 가동 중</div>
+                    • <strong>세션 독립성 100% 보장:</strong> 여러 교사·학생이 동시에 웹사이트에 접속하여 대용량 PDF나 HWP를 변환해도, 문서 파싱과 PDF 합성이 각 접속자의 기기(브라우저 메모리)에서 독립적으로 처리되어 파일 섞임이나 서버 다운이 발생하지 않습니다.<br>
+                    • <strong>스마트 AI 대기열(Queue) 및 캐싱:</strong> 동시 요청 시 자동으로 트래픽을 분산(Throttling & Jitter Backoff)하며, 중복 문장은 즉시 캐시에서 불러와 속도 저하와 할당량 초과를 방지합니다.
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="font-extrabold text-slate-800">📊 현재 브라우저 세션 상태</span>
+                        <button type="button" id="clear-cache-btn" class="text-xs font-bold text-blue-600 hover:underline">캐시 비우기</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-white p-2.5 rounded-xl border border-slate-200">
+                            <div class="text-slate-400 font-semibold">세션 고유 ID</div>
+                            <div id="session-id-display" class="font-mono font-bold text-slate-800 truncate mt-0.5">-</div>
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-slate-200">
+                            <div class="text-slate-400 font-semibold">번역 메모리 캐시</div>
+                            <div id="cache-count-display" class="font-mono font-bold text-blue-600 mt-0.5">0건 저장됨</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
+                    <div class="font-extrabold text-blue-900">🔑 외부 웹사이트 자체 배포 시 전용 API 키 설정 (선택사항)</div>
+                    <p class="text-xs text-slate-600">현재 환경에서는 키 입력 없이 즉시 작동합니다. 만약 이 HTML 파일을 학교 홈페이지나 외부 웹호스팅(Netlify, GitHub Pages 등)에 올려 대규모 인원이 동시에 사용할 경우, 기관/개인 Gemini API 키를 입력하면 독립 쿼터로 더욱 빠르게 동작합니다.</p>
+                    <input type="password" id="custom-api-key-input" placeholder="기본 내장 AI 엔진 사용 중 (외부 호스팅 시에만 AIza... 입력)" class="w-full rounded-xl border border-blue-300 px-3 py-2 text-xs font-mono bg-white focus:outline-none focus:border-blue-600">
+                </div>
+            </div>
+
+            <button id="confirm-concurrency-btn" type="button" class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm">설정 저장 및 닫기</button>
+        </div>
+    </div>
+
+    <!-- 사용 가이드 & 홈 화면 추가 안내 모달 -->
+    <div id="guide-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[88vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-extrabold text-slate-900">📱 모바일 & PC 활용 가이드</h3>
+                <button id="close-guide-btn" type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-600">✕</button>
+            </div>
+            <div class="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <div class="p-3.5 rounded-2xl bg-blue-50 border border-blue-100">
+                    <div class="font-extrabold text-blue-900 mb-1">1. 📄 PDF · 한글(HWP/HWPX) · 사진 자막 병기 (결과물: PDF)</div>
+                    교과서·학습지 <strong>PDF 파일</strong>은 물론, 학교에서 작성한 <strong>한글 문서(.hwp, .hwpx)</strong>나 <strong>스마트폰 사진</strong>을 올리면 한글 문장 바로 아래에 다국어 자막을 병기하여 <strong>인쇄용 PDF로 통합 발행</strong>해 줍니다.
+                </div>
+                <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-100">
+                    <div class="font-extrabold text-amber-900 mb-1">2. ✨ PPT 요약 학습지 (2~3쪽 A4)</div>
+                    수업용 PPTX 파일을 올리면 초등학생 눈높이에 맞춘 <strong>핵심 문장 8개 + 필수 어휘 + 확인 문제</strong>가 담긴 A4 학습지로 자동 제작됩니다.
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100">
+                    <div class="font-extrabold text-emerald-900 mb-1">3. ✍️ 파일 없이 알림장·지문 즉시 변환</div>
+                    학부모 알림장이나 읽기 지문을 복사해 붙여넣기만 하면 깔끔한 이중언어 유인물과 카카오톡 공유용 이미지로 만들어 줍니다.
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-100 border border-slate-200">
+                    <div class="font-extrabold text-slate-800 mb-1">📲 스마트폰 홈 화면에 앱처럼 추가하기</div>
+                    • <strong>아이폰(Safari):</strong> 하단 공유 버튼[↑] 탭 → <em>'홈 화면에 추가'</em><br>
+                    • <strong>안드로이드(Chrome):</strong> 우측 상단 메뉴[⋮] 탭 → <em>'홈 화면에 추가 / 앱 설치'</em>
+                </div>
+            </div>
+            <button id="confirm-guide-btn" type="button" class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm">확인했습니다</button>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let rawPdfLibBuffer = null;
+        let pdfPagesModel = [];
+        let pdfSubtitleStyle = {
+            scale: 1.0,
+            color: '#1d4ed8',
+            bgMode: 'halo'
+        };
+
+        let pptWorksheetData = null;
+        let currentWorksheetStyle = 'classic';
+        let originalFileName = "다문화_학습지";
+        let currentMode = 'pdf'; // 'pdf' | 'ppt' | 'text'
+        let currentZoomMode = 'fit'; // 'fit' | number (0.5 ~ 1.5)
+
+        // ============================================================================
+        // [다중 접속(Multi-User) 안정화 엔진] 세션 격리 · 번역 캐시 · 스마트 요청 대기열
+        // ============================================================================
+        const clientSessionId = 'SES-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        const translationMemoryCache = new Map();
+        const activeObjectUrls = new Set();
+        let userCustomApiKey = "";
+        let activeApiRequests = 0;
+        const MAX_CONCURRENT_REQUESTS = 2;
+        const apiRequestQueue = [];
+
+        function registerObjectUrl(url) {
+            activeObjectUrls.add(url);
+            return url;
+        }
+
+        function cleanupSessionMemory() {
+            activeObjectUrls.forEach(url => {
+                try { URL.revokeObjectURL(url); } catch (e) {}
+            });
+            activeObjectUrls.clear();
+            pdfPagesModel = [];
+            rawPdfLibBuffer = null;
+        }
+
+        function runWithConcurrencyLimit(taskFn) {
+            return new Promise((resolve, reject) => {
+                apiRequestQueue.push({ taskFn, resolve, reject });
+                processApiQueue();
+            });
+        }
+
+        function processApiQueue() {
+            while (activeApiRequests < MAX_CONCURRENT_REQUESTS && apiRequestQueue.length > 0) {
+                const { taskFn, resolve, reject } = apiRequestQueue.shift();
+                activeApiRequests++;
+                taskFn()
+                    .then(resolve)
+                    .catch(reject)
+                    .finally(() => {
+                        activeApiRequests--;
+                        processApiQueue();
+                    });
+            }
+        }
+
+        function updateConcurrencyModalInfo() {
+            const sesEl = document.getElementById('session-id-display');
+            const cacheEl = document.getElementById('cache-count-display');
+            if (sesEl) sesEl.textContent = clientSessionId;
+            if (cacheEl) cacheEl.textContent = `${translationMemoryCache.size}건 저장됨`;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                info: 'bg-slate-900 text-white border-slate-700',
+                success: 'bg-emerald-700 text-white border-emerald-500',
+                error: 'bg-red-600 text-white border-red-400'
+            };
+            toast.className = `px-4 py-3 rounded-2xl shadow-xl border text-xs sm:text-sm font-bold flex items-center justify-between gap-3 transition-all duration-300 pointer-events-auto ${colors[type] || colors.info}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        const logConsole = document.getElementById('log-console');
+        function log(message) {
+            const div = document.createElement('div');
+            div.textContent = `> ${message}`;
+            logConsole.appendChild(div);
+            logConsole.scrollTop = logConsole.scrollHeight;
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('progress-percent').textContent = `${percent}%`;
+            document.getElementById('status-text').textContent = text;
+        }
+
+        function getSelectedTargetLanguage() {
+            const checked = document.querySelector('input[name="lang"]:checked');
+            if (!checked) return '러시아어';
+            if (checked.value === 'custom') {
+                const customVal = document.getElementById('custom-lang-input').value.trim();
+                return customVal || '영어';
+            }
+            return checked.value;
+        }
+
+        document.querySelectorAll('input[name="lang"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const wrapper = document.getElementById('custom-lang-wrapper');
+                if (document.getElementById('lang-custom-radio').checked) {
+                    wrapper.classList.remove('hidden');
+                    document.getElementById('custom-lang-input').focus();
+                } else {
+                    wrapper.classList.add('hidden');
+                }
+            });
+        });
+
+        function switchTab(mode) {
+            // 작업 완료 화면이 열려있다면 초기화 후 탭 전환
+            if (!document.getElementById('success-section').classList.contains('hidden')) {
+                resetWorkspaceToHome();
+            }
+            currentMode = mode;
+            document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+            document.querySelectorAll('.mode-section').forEach(sec => sec.classList.add('hidden'));
+
+            const activeTopTab = document.getElementById(`tab-${mode}`);
+            if (activeTopTab) activeTopTab.classList.add('active');
+
+            const targetSec = document.getElementById(`${mode}-section`);
+            if (targetSec) targetSec.classList.remove('hidden');
+
+            const pdfOptPanel = document.getElementById('pdf-options-panel');
+            if (pdfOptPanel) {
+                pdfOptPanel.style.display = mode === 'pdf' ? 'grid' : 'none';
+            }
+        }
+
+        function resetWorkspaceToHome() {
+            cleanupSessionMemory();
+            document.getElementById('status-section').classList.add('hidden');
+            document.getElementById('success-section').classList.add('hidden');
+            document.getElementById('pdf-studio-controls').classList.add('hidden');
+            document.getElementById('pdf-studio-wrapper').classList.add('hidden');
+            document.getElementById('ppt-preview-controls').classList.add('hidden');
+            document.getElementById('worksheet-preview-wrapper').classList.add('hidden');
+            document.getElementById('header-reset-btn').classList.add('hidden');
+
+            document.getElementById('top-mode-tabs').classList.remove('hidden');
+            document.getElementById('language-section').classList.remove('hidden');
+            document.getElementById('pdf-input').value = '';
+            document.getElementById('camera-input').value = '';
+            document.getElementById('ppt-input').value = '';
+
+            document.querySelectorAll('.mode-section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(`${currentMode}-section`).classList.remove('hidden');
+        }
+
+        document.getElementById('tab-pdf').addEventListener('click', () => switchTab('pdf'));
+        document.getElementById('tab-ppt').addEventListener('click', () => switchTab('ppt'));
+        document.getElementById('tab-text').addEventListener('click', () => switchTab('text'));
+        document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.mode));
+        });
+
+        document.getElementById('reload-btn').addEventListener('click', resetWorkspaceToHome);
+        document.getElementById('header-reset-btn').addEventListener('click', resetWorkspaceToHome);
+
+        const guideModal = document.getElementById('guide-modal');
+        document.getElementById('guide-modal-btn').addEventListener('click', () => guideModal.classList.remove('hidden'));
+        document.getElementById('close-guide-btn').addEventListener('click', () => guideModal.classList.add('hidden'));
+        document.getElementById('confirm-guide-btn').addEventListener('click', () => guideModal.classList.add('hidden'));
+
+        const concurrencyModal = document.getElementById('concurrency-modal');
+        document.getElementById('concurrency-modal-btn').addEventListener('click', () => {
+            updateConcurrencyModalInfo();
+            concurrencyModal.classList.remove('hidden');
+        });
+        document.getElementById('close-concurrency-btn').addEventListener('click', () => concurrencyModal.classList.add('hidden'));
+        document.getElementById('confirm-concurrency-btn').addEventListener('click', () => {
+            userCustomApiKey = document.getElementById('custom-api-key-input').value.trim();
+            concurrencyModal.classList.add('hidden');
+            showToast('다중 접속 및 엔진 설정이 반영되었습니다.', 'success');
+        });
+        document.getElementById('clear-cache-btn').addEventListener('click', () => {
+            translationMemoryCache.clear();
+            updateConcurrencyModalInfo();
+            showToast('번역 메모리 캐시가 초기화되었습니다.', 'info');
+        });
+
+        document.getElementById('btn-select-pdf').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('pdf-input').click();
+        });
+        document.getElementById('btn-camera-capture').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('camera-input').click();
+        });
+        document.getElementById('pdf-upload-box').addEventListener('click', () => document.getElementById('pdf-input').click());
+        document.getElementById('ppt-upload-box').addEventListener('click', () => document.getElementById('ppt-input').click());
+
+        // 데스크톱 드래그 앤 드롭 지원
+        function setupDropzone(boxId, onFileCallback) {
+            const box = document.getElementById(boxId);
+            ['dragenter', 'dragover'].forEach(evt => {
+                box.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    box.classList.add('dropzone-active');
+                });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                box.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    box.classList.remove('dropzone-active');
+                });
+            });
+            box.addEventListener('drop', (e) => {
+                const files = e.dataTransfer?.files;
+                if (files && files.length > 0) onFileCallback(files[0]);
+            });
+        }
+
+        setupDropzone('pdf-upload-box', (file) => handlePdfOrImageFile(file));
+        setupDropzone('ppt-upload-box', (file) => handlePptFile(file));
+
+        function applyResponsivePreviewScale() {
+            // 1. PDF 스튜디오 스케일링
+            const pdfContainer = document.getElementById('pdf-studio-pages-container');
+            if (pdfContainer && !document.getElementById('pdf-studio-wrapper').classList.contains('hidden')) {
+                const availW = Math.max(280, pdfContainer.clientWidth - 8);
+                let appliedScale = 1;
+                pdfContainer.querySelectorAll('.pdf-studio-page').forEach((pageEl, idx) => {
+                    const pageData = pdfPagesModel[idx];
+                    if (!pageData) return;
+                    const scale = currentZoomMode === 'fit'
+                        ? Math.min(1.0, availW / pageData.displayWidth)
+                        : currentZoomMode;
+                    appliedScale = scale;
+                    pageEl.style.transform = `scale(${scale})`;
+                    pageEl.style.marginBottom = `${(pageData.displayHeight * (scale - 1)) + 20}px`;
+                });
+                document.getElementById('zoom-level-text').textContent = `${Math.round(appliedScale * 100)}%`;
+            }
+
+            // 2. A4 학습지 미리보기 스케일링
+            const wsContainer = document.getElementById('worksheet-pages-container');
+            if (wsContainer && !document.getElementById('worksheet-preview-wrapper').classList.contains('hidden')) {
+                const availW = Math.max(280, wsContainer.clientWidth - 8);
+                const baseA4Width = 794;
+                const scale = currentZoomMode === 'fit'
+                    ? Math.min(1.0, availW / baseA4Width)
+                    : currentZoomMode;
+
+                wsContainer.querySelectorAll('.a4-scale-slot').forEach(slot => {
+                    const sheet = slot.querySelector('.a4-sheet');
+                    if (!sheet) return;
+                    sheet.style.transform = `scale(${scale})`;
+                    const actualH = sheet.offsetHeight || 1123;
+                    slot.style.height = `${Math.ceil(actualH * scale) + 8}px`;
+                });
+                document.getElementById('zoom-level-text').textContent = `${Math.round(scale * 100)}%`;
+            }
+        }
+
+        window.addEventListener('resize', applyResponsivePreviewScale);
+
+        document.getElementById('zoom-fit-btn').addEventListener('click', () => {
+            currentZoomMode = 'fit';
+            applyResponsivePreviewScale();
+        });
+        document.getElementById('zoom-out-btn').addEventListener('click', () => {
+            const cur = currentZoomMode === 'fit' ? 0.8 : currentZoomMode;
+            currentZoomMode = Math.max(0.4, Math.round((cur - 0.1) * 10) / 10);
+            applyResponsivePreviewScale();
+        });
+        document.getElementById('zoom-in-btn').addEventListener('click', () => {
+            const cur = currentZoomMode === 'fit' ? 0.8 : currentZoomMode;
+            currentZoomMode = Math.min(1.4, Math.round((cur + 0.1) * 10) / 10);
+            applyResponsivePreviewScale();
+        });
+
+        function cleanJSONString(str) {
+            let cleaned = str.trim();
+            if (cleaned.startsWith("```json")) {
+                cleaned = cleaned.replace(/^```json/, "").replace(/```$/, "");
+            } else if (cleaned.startsWith("```")) {
+                cleaned = cleaned.replace(/^```/, "").replace(/```$/, "");
+            }
+            return cleaned.trim();
+        }
+
+        function getDocTypeInstruction(docType, targetLang) {
+            if (docType === 'exam') {
+                return `이 문서는 학생들의 학업 성취도를 평가하는 '시험지/평가지'입니다. 문제의 지시문(발문), 조건, 보기를 ${targetLang}로 정확히 번역하되, 문제의 정답이나 힌트를 절대 추가로 적어주지 마세요. 수식이나 기호(ㄱ, ㄴ, ㄷ, 가, 나, 다)는 원문 기호를 병기해 학생이 혼동하지 않게 하세요.`;
+            } else if (docType === 'notice') {
+                return `이 문서는 학교에서 다문화 가정 학부모님과 학생에게 보내는 '가정통신문/안내장'입니다. 날짜, 준비물, 신청 방법, 안내 사항이 정확히 전달되도록 정중하고 명확한 ${targetLang}로 번역하세요.`;
+            } else if (docType === 'reading') {
+                return `이 문서는 국어·사회·과학 등의 '교과서 읽기 지문 및 학습지'입니다. 문맥과 어휘의 의미를 살려 학생이 쉽게 독해할 수 있도록 자연스러운 ${targetLang}로 번역하세요.`;
+            }
+            return `이 문서는 초·중등 교육용 '교과서 및 학습지'입니다. 다문화 학생이 개념과 활동 지시문을 쉽게 이해할 수 있도록 직관적이고 간결한 ${targetLang}로 번역하세요. 번역문은 가급적 간결하게 작성하여 자막 길이가 너무 길어지지 않도록 하세요.`;
+        }
+
+        async function translatePdfBlocksBatch(texts, targetLang, docType) {
+            if (!texts || texts.length === 0) return [];
+            const results = new Array(texts.length).fill("");
+            const uncachedIndices = [];
+            const uncachedTexts = [];
+
+            // 다중 접속 부하 절감을 위한 캐시 조회
+            texts.forEach((txt, idx) => {
+                const key = `${targetLang}|${docType}|${txt.trim()}`;
+                if (translationMemoryCache.has(key)) {
+                    results[idx] = translationMemoryCache.get(key);
+                } else {
+                    uncachedIndices.push(idx);
+                    uncachedTexts.push(txt);
+                }
+            });
+
+            if (uncachedTexts.length === 0) return results;
+
+            const contextGuide = getDocTypeInstruction(docType, targetLang);
+            const prompt = `당신은 다문화 학생들을 위한 교육 전문 번역가입니다.
+${contextGuide}
+
+[중요 규칙]
+1. 입력된 한국어 문자열 배열(길이: ${uncachedTexts.length})을 순서대로 ${targetLang}로 번역하세요.
+2. 반환값은 반드시 입력 배열과 길이가 정확히 동일한(${uncachedTexts.length}개) JSON 문자열 배열(Array of strings)이어야 합니다.
+3. 한국어 원문에 있는 번호(1, 2, ①, •)는 중복해서 넣지 말고 순수 번역 내용만 간결하게 작성하세요.
+4. 번역이 불필요한 단순 기호나 숫자인 경우 빈 문자열("")을 넣으세요.
+
+원본 배열:
+${JSON.stringify(uncachedTexts)}`;
+
+            const res = await callGeminiAPI(prompt, "array");
+            if (Array.isArray(res)) {
+                uncachedIndices.forEach((origIdx, i) => {
+                    const transVal = (res[i] || "").trim();
+                    results[origIdx] = transVal;
+                    if (transVal) {
+                        const key = `${targetLang}|${docType}|${texts[origIdx].trim()}`;
+                        translationMemoryCache.set(key, transVal);
+                    }
+                });
+            }
+            return results;
+        }
+
+        // ============================================================================
+        // [HWP / HWPX 파서 & A4 이중언어 자막 스튜디오 PDF 렌더러]
+        // ============================================================================
+        function decodeHwpParaTextRecord(uint8Payload) {
+            let text = "";
+            const view = new DataView(uint8Payload.buffer, uint8Payload.byteOffset, uint8Payload.byteLength);
+            const totalLen = uint8Payload.byteLength;
+            let offset = 0;
+
+            while (offset + 1 < totalLen) {
+                const code = view.getUint16(offset, true);
+                if (code === 0) {
+                    offset += 2;
+                } else if (
+                    code === 1 || code === 2 || code === 3 ||
+                    (code >= 11 && code <= 18) ||
+                    (code >= 21 && code <= 23) ||
+                    (code >= 4 && code <= 9) ||
+                    code === 19 || code === 20
+                ) {
+                    // HWP 5.0 확장/인라인 제어문자는 총 8 WCHAR (16 바이트) 차지
+                    offset += 16;
+                } else if (code === 10 || code === 13) {
+                    text += "\n";
+                    offset += 2;
+                } else if (code === 9) {
+                    text += " ";
+                    offset += 2;
+                } else if (code < 32) {
+                    offset += 2;
+                } else {
+                    text += String.fromCharCode(code);
+                    offset += 2;
+                }
+            }
+            return text.replace(/\s+/g, " ").trim();
+        }
+
+        function parseHwpSectionStream(streamBytes, isCompressed) {
+            let rawData = streamBytes instanceof Uint8Array ? streamBytes : new Uint8Array(streamBytes);
+            if (isCompressed) {
+                try {
+                    rawData = pako.inflateRaw(rawData);
+                } catch (e1) {
+                    try {
+                        rawData = pako.inflate(rawData);
+                    } catch (e2) {
+                        return [];
+                    }
+                }
+            }
+
+            const paragraphs = [];
+            const view = new DataView(rawData.buffer, rawData.byteOffset, rawData.byteLength);
+            let pos = 0;
+            const len = rawData.byteLength;
+
+            while (pos + 4 <= len) {
+                const header = view.getUint32(pos, true);
+                pos += 4;
+                const tagId = header & 0x3FF;
+                let size = (header >>> 20) & 0xFFF;
+                if (size === 0xFFF) {
+                    if (pos + 4 > len) break;
+                    size = view.getUint32(pos, true);
+                    pos += 4;
+                }
+                if (pos + size > len) break;
+
+                // HWPTAG_PARA_TEXT === 67
+                if (tagId === 67 && size >= 2) {
+                    const recordSlice = rawData.subarray(pos, pos + size);
+                    const paraStr = decodeHwpParaTextRecord(recordSlice);
+                    if (paraStr && paraStr.length >= 2 && /[가-힣a-zA-Z0-9]/.test(paraStr)) {
+                        paragraphs.push(paraStr);
+                    }
+                }
+                pos += size;
+            }
+            return paragraphs;
+        }
+
+        async function extractParagraphsFromHwpOrHwpx(file) {
+            const fileNameLower = file.name.toLowerCase();
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8 = new Uint8Array(arrayBuffer);
+
+            // 1. ZIP 시그니처(PK\x03\x04) 또는 .hwpx 파일인 경우 (OWPML XML 파싱)
+            const isZipSignature = uint8.length > 4 && uint8[0] === 0x50 && uint8[1] === 0x4B;
+            if (fileNameLower.endsWith('.hwpx') || isZipSignature) {
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                const sectionFiles = Object.keys(zip.files)
+                    .filter(name => /^Contents\/section\d+\.xml$/i.test(name))
+                    .sort((a, b) => {
+                        const na = parseInt(a.match(/(\d+)/)?.[1] || "0", 10);
+                        const nb = parseInt(b.match(/(\d+)/)?.[1] || "0", 10);
+                        return na - nb;
+                    });
+
+                const paragraphs = [];
+                const parser = new DOMParser();
+
+                for (const secPath of sectionFiles) {
+                    const xmlText = await zip.file(secPath).async("string");
+                    const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+                    const pNodes = Array.from(xmlDoc.getElementsByTagNameNS("*", "p"));
+                    if (pNodes.length > 0) {
+                        for (const pNode of pNodes) {
+                            // 중첩 문단 중복 방지: 가장 하위 문단 또는 직접 텍스트를 가진 문단 추출
+                            const tNodes = Array.from(pNode.getElementsByTagNameNS("*", "t"));
+                            if (tNodes.length === 0) continue;
+                            const combined = tNodes.map(t => t.textContent || "").join("").replace(/\s+/g, " ").trim();
+                            if (combined && combined.length >= 2 && paragraphs[paragraphs.length - 1] !== combined) {
+                                paragraphs.push(combined);
+                            }
+                        }
+                    } else {
+                        const rawMatches = xmlText.match(/<[^>]*:?t[^>]*>([\s\S]*?)<\/[^>]*:?t>/g) || [];
+                        const joined = rawMatches.map(m => m.replace(/<[^>]+>/g, "").trim()).filter(Boolean).join(" ");
+                        if (joined) paragraphs.push(joined);
+                    }
+                }
+
+                if (paragraphs.length === 0 && zip.file("Preview/PrvText.txt")) {
+                    const prvTxt = await zip.file("Preview/PrvText.txt").async("string");
+                    prvTxt.split(/\r?\n/).forEach(line => {
+                        const cl = line.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+                        if (cl.length >= 2) paragraphs.push(cl);
+                    });
+                }
+                return deduplicateConsecutiveParagraphs(paragraphs);
+            }
+
+            // 2. HWP 5.0 OLE2 복합 문서 (.hwp) 파싱
+            if (typeof CFB !== 'undefined') {
+                const cfbContainer = CFB.read(uint8, { type: 'array' });
+                let isCompressed = true;
+
+                const headerEntry = CFB.find(cfbContainer, 'FileHeader');
+                if (headerEntry && headerEntry.content && headerEntry.content.length >= 40) {
+                    const hdrBytes = headerEntry.content instanceof Uint8Array
+                        ? headerEntry.content
+                        : new Uint8Array(headerEntry.content);
+                    const flags = new DataView(hdrBytes.buffer, hdrBytes.byteOffset, hdrBytes.byteLength).getUint32(36, true);
+                    isCompressed = (flags & 0x01) !== 0;
+                }
+
+                const sectionEntries = (cfbContainer.FullPaths || [])
+                    .map((path, idx) => ({ path, entry: cfbContainer.FileIndex[idx] }))
+                    .filter(item => /BodyText\/Section\d+$/i.test(item.path))
+                    .sort((a, b) => {
+                        const na = parseInt(a.path.match(/Section(\d+)/i)?.[1] || "0", 10);
+                        const nb = parseInt(b.path.match(/Section(\d+)/i)?.[1] || "0", 10);
+                        return na - nb;
+                    });
+
+                let allParas = [];
+                for (const sec of sectionEntries) {
+                    if (sec.entry && sec.entry.content) {
+                        const extracted = parseHwpSectionStream(sec.entry.content, isCompressed);
+                        allParas.push(...extracted);
+                    }
+                }
+
+                // 만약 배포용 문서 암호화 등으로 BodyText가 비어있다면 PrvText(미리보기 텍스트 스트림)에서 추출
+                if (allParas.length === 0) {
+                    const prvEntry = CFB.find(cfbContainer, 'PrvText');
+                    if (prvEntry && prvEntry.content) {
+                        const prvBytes = prvEntry.content instanceof Uint8Array
+                            ? prvEntry.content
+                            : new Uint8Array(prvEntry.content);
+                        const decoder = new TextDecoder('utf-16le');
+                        const prvText = decoder.decode(prvBytes);
+                        prvText.split(/\r?\n/).forEach(line => {
+                            const cleaned = line.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+                            if (cleaned.length >= 2) allParas.push(cleaned);
+                        });
+                    }
+                }
+
+                return deduplicateConsecutiveParagraphs(allParas);
+            }
+
+            return [];
+        }
+
+        function deduplicateConsecutiveParagraphs(arr) {
+            const result = [];
+            for (const item of arr) {
+                const cleaned = item.replace(/[\x00-\x1F\uF000-\uFFFF]/g, "").trim();
+                if (!cleaned || cleaned.length < 2) continue;
+                if (result.length === 0 || result[result.length - 1] !== cleaned) {
+                    result.push(cleaned);
+                }
+            }
+            return result;
+        }
+
+        async function convertHwpParagraphsToPdfAndStudioModel(paragraphs, rawTitle, targetLang, docType) {
+            const pageW = 794;
+            const pageH = 1123;
+            const marginX = 56;
+            const contentW = pageW - marginX * 2;
+            const fontFamily = "'Pretendard', 'Noto Sans KR', sans-serif";
+
+            // 1. 먼저 AI로 모든 한글 문단을 일괄 번역
+            const koreanList = paragraphs.map(p => p.trim()).filter(p => /[가-힣]/.test(p));
+            const transMap = new Map();
+            const batchSize = 22;
+
+            for (let i = 0; i < koreanList.length; i += batchSize) {
+                const slice = koreanList.slice(i, i + batchSize);
+                const pct = 30 + Math.floor((i / Math.max(1, koreanList.length)) * 50);
+                updateProgress(pct, `HWP 한글 문서 문단 AI 번역 중... (${Math.min(koreanList.length, i + slice.length)}/${koreanList.length})`);
+                const translatedSlice = await translatePdfBlocksBatch(slice, targetLang, docType);
+                slice.forEach((koStr, idx) => {
+                    transMap.set(koStr, (translatedSlice[idx] || "").trim());
+                });
+            }
+
+            // 2. A4 페이지 캔버스에 한글 원문을 조판하면서 각 문단 바로 아래에 다국어 자막 공간과 싱크 좌표를 확보
+            const measureCanvas = document.createElement('canvas');
+            const mCtx = measureCanvas.getContext('2d');
+
+            const pagesData = [];
+            let currentCanvas = null;
+            let currentCtx = null;
+            let currentBlocks = [];
+            let cursorY = 0;
+            let pageIndex = 0;
+
+            function startNewHwpPage() {
+                pageIndex++;
+                const canvas = document.createElement('canvas');
+                canvas.width = pageW;
+                canvas.height = pageH;
+                const ctx = canvas.getContext('2d');
+
+                // 흰색 배경 및 상단 문서 헤더
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, pageW, pageH);
+
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(marginX, 74);
+                ctx.lineTo(pageW - marginX, 74);
+                ctx.stroke();
+
+                ctx.fillStyle = '#475569';
+                ctx.font = `700 13px ${fontFamily}`;
+                ctx.textBaseline = 'top';
+                const cleanDocTitle = cleanTopicName(rawTitle);
+                ctx.fillText(`📄 ${cleanDocTitle}`, marginX, 46);
+
+                ctx.fillStyle = '#64748b';
+                ctx.font = `600 12px ${fontFamily}`;
+                const pageBadge = `${pageIndex}쪽`;
+                const badgeW = ctx.measureText(pageBadge).width;
+                ctx.fillText(pageBadge, pageW - marginX - badgeW, 47);
+
+                currentCanvas = canvas;
+                currentCtx = ctx;
+                currentBlocks = [];
+                cursorY = 96;
+
+                if (pageIndex === 1) {
+                    // 첫 페이지 상단 문서 제목 블록
+                    ctx.fillStyle = '#0f172a';
+                    ctx.font = `800 22px ${fontFamily}`;
+                    const titleLines = wrapMultilingualText(ctx, cleanDocTitle, contentW);
+                    for (const tLine of titleLines) {
+                        ctx.fillText(tLine, marginX, cursorY);
+                        cursorY += 30;
+                    }
+                    cursorY += 16;
+                }
+
+                pagesData.push({
+                    pageNumber: pageIndex,
+                    pdfWidth: pageW,
+                    pdfHeight: pageH,
+                    displayWidth: pageW,
+                    displayHeight: pageH,
+                    previewCanvas: canvas,
+                    blocks: currentBlocks
+                });
+            }
+
+            startNewHwpPage();
+
+            for (let idx = 0; idx < paragraphs.length; idx++) {
+                const para = paragraphs[idx].trim();
+                if (!para) continue;
+
+                const isHeading = idx === 0 || (para.length <= 36 && (/^[0-9ⅠⅡⅢⅣⅤ一-龥가-하][\.\)]/.test(para) || /^[\[【<〈「『]/.test(para)));
+                const koFontSize = isHeading ? 17 : 14.5;
+                const koFontWeight = isHeading ? '800' : '600';
+                const koLineHeight = koFontSize * 1.48;
+
+                mCtx.font = `${koFontWeight} ${koFontSize}px ${fontFamily}`;
+                const koLines = wrapMultilingualText(mCtx, para, contentW - 8);
+
+                const transText = transMap.get(para) || "";
+                const subFontSize = isHeading ? 12.5 : 11.2;
+                const subLineHeight = subFontSize * 1.28;
+                mCtx.font = `600 ${subFontSize}px ${fontFamily}`;
+                const transLines = transText ? wrapMultilingualText(mCtx, transText, contentW - 12) : [];
+
+                const neededKoHeight = koLines.length * koLineHeight;
+                const neededSubHeight = transLines.length > 0 ? (transLines.length * subLineHeight + 10) : 6;
+                const totalBlockHeight = neededKoHeight + neededSubHeight + 18;
+
+                if (cursorY + totalBlockHeight > pageH - 64 && cursorY > 130) {
+                    startNewHwpPage();
+                }
+
+                // 한글 문단 좌측 포인트 바 (가독성 향상)
+                if (isHeading) {
+                    currentCtx.fillStyle = '#eff6ff';
+                    currentCtx.fillRect(marginX - 6, cursorY - 4, contentW + 12, neededKoHeight + 6);
+                }
+
+                currentCtx.fillStyle = isHeading ? '#0f172a' : '#1e293b';
+                currentCtx.font = `${koFontWeight} ${koFontSize}px ${fontFamily}`;
+                currentCtx.textBaseline = 'top';
+
+                for (const lineStr of koLines) {
+                    currentCtx.fillText(lineStr, marginX, cursorY);
+                    cursorY += koLineHeight;
+                }
+
+                // 한글 문단 바로 아래에 다국어 자막 블록 배치
+                if (transText) {
+                    const subYAnchor = cursorY + 2;
+                    currentBlocks.push({
+                        id: `hwp-sub-${pageIndex}-${idx}-${Date.now()}`,
+                        koText: para,
+                        transText: transText,
+                        xRatio: marginX / pageW,
+                        yRatio: subYAnchor / pageH,
+                        wRatio: (contentW - 8) / pageW,
+                        fontRatio: subFontSize / pageH
+                    });
+                    cursorY += neededSubHeight + 16;
+                } else {
+                    cursorY += 12;
+                }
+            }
+
+            // 3. 조판된 HWP A4 캔버스들을 기반으로 PDF-Lib 원본 버퍼(rawPdfLibBuffer) 생성 -> 최종 발행물은 100% PDF
+            const { PDFDocument } = PDFLib;
+            const pdfDoc = await PDFDocument.create();
+            for (const pData of pagesData) {
+                const jpgUrl = pData.previewCanvas.toDataURL('image/jpeg', 0.95);
+                const embeddedJpg = await pdfDoc.embedJpg(jpgUrl);
+                const page = pdfDoc.addPage([pageW, pageH]);
+                page.drawImage(embeddedJpg, { x: 0, y: 0, width: pageW, height: pageH });
+            }
+            const savedBytes = await pdfDoc.save();
+
+            return {
+                pdfBytesBuffer: savedBytes.buffer,
+                pagesData
+            };
+        }
+
+        async function handlePdfOrImageFile(file) {
+            if (!file) return;
+            cleanupSessionMemory();
+            originalFileName = file.name;
+            const fileNameLower = file.name.toLowerCase();
+            const targetLang = getSelectedTargetLanguage();
+            const docType = document.getElementById('pdf-doc-type').value;
+            const syncMode = document.getElementById('pdf-sync-mode').value;
+
+            document.getElementById('pdf-section').classList.add('hidden');
+            document.getElementById('language-section').classList.add('hidden');
+            document.getElementById('top-mode-tabs').classList.add('hidden');
+            document.getElementById('status-section').classList.remove('hidden');
+            document.getElementById('header-reset-btn').classList.remove('hidden');
+
+            try {
+                if (document.fonts && document.fonts.ready) await document.fonts.ready;
+                pdfPagesModel = [];
+
+                const isHwpFile = fileNameLower.endsWith('.hwp') || fileNameLower.endsWith('.hwpx');
+
+                if (isHwpFile) {
+                    log(`[HWP/HWPX 한글 문서 모드] 문서 구조 및 본문 추출 중... (${file.name})`);
+                    updateProgress(12, `한글 문서(${file.name})의 본문과 표 텍스트를 추출하는 중...`);
+
+                    const paragraphs = await extractParagraphsFromHwpOrHwpx(file);
+                    if (!paragraphs || paragraphs.length === 0) {
+                        throw new Error("한글(HWP) 문서에서 텍스트를 추출하지 못했습니다. 배포용 암호 설정 여부를 확인해 주세요.");
+                    }
+
+                    log(`한글 문서 문단 ${paragraphs.length}개 추출 완료. ${targetLang} 자막 병기 및 PDF 조판 시작...`);
+                    const { pdfBytesBuffer, pagesData } = await convertHwpParagraphsToPdfAndStudioModel(
+                        paragraphs,
+                        file.name,
+                        targetLang,
+                        docType
+                    );
+
+                    rawPdfLibBuffer = pdfBytesBuffer;
+                    pdfPagesModel = pagesData;
+                    log(`HWP -> 다국어 자막 병기 PDF 변환 완료 (총 ${pdfPagesModel.length}쪽).`);
+
+                } else if (file.type.startsWith('image/')) {
+                    log(`[사진 촬영/이미지 모드] 이미지 불러오는 중... (${file.name})`);
+                    updateProgress(20, `학습지 사진을 분석하고 ${targetLang} 자막 위치를 찾는 중...`);
+                    const { pdfBytesBuffer, previewCanvas, dispW, dispH } = await convertImageFileToPdfAndCanvas(file);
+                    rawPdfLibBuffer = pdfBytesBuffer;
+
+                    const blocks = await extractAndTranslatePageWithVision(previewCanvas, targetLang, docType);
+                    log(`AI 비전 인식 완료: 자막 블록 ${blocks.length}개 생성.`);
+
+                    pdfPagesModel.push({
+                        pageNumber: 1,
+                        pdfWidth: dispW,
+                        pdfHeight: dispH,
+                        displayWidth: dispW,
+                        displayHeight: dispH,
+                        previewCanvas,
+                        blocks
+                    });
+                } else {
+                    log(`[PDF 모드] 문서 로드 중... (${file.name})`);
+                    updateProgress(8, "PDF 문서 구조 및 텍스트 레이어 분석 중...");
+
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdfJsBuffer = arrayBuffer.slice(0);
+                    rawPdfLibBuffer = arrayBuffer.slice(0);
+
+                    const pdf = await pdfjsLib.getDocument(pdfJsBuffer).promise;
+                    const totalPages = pdf.numPages;
+
+                    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                        const progressBase = 10 + Math.floor(((pageNum - 1) / totalPages) * 78);
+                        updateProgress(progressBase, `${pageNum}/${totalPages}쪽 레이아웃 분석 및 ${targetLang} 자막 생성 중...`);
+
+                        const page = await pdf.getPage(pageNum);
+                        const baseViewport = page.getViewport({ scale: 1.0 });
+                        const previewScale = Math.min(1.6, 780 / baseViewport.width);
+                        const previewViewport = page.getViewport({ scale: previewScale });
+
+                        const previewCanvas = document.createElement('canvas');
+                        previewCanvas.width = Math.round(previewViewport.width);
+                        previewCanvas.height = Math.round(previewViewport.height);
+                        const ctx = previewCanvas.getContext('2d');
+                        await page.render({ canvasContext: ctx, viewport: previewViewport }).promise;
+
+                        const textContent = await page.getTextContent();
+                        let blocks = analyzePdfPageLayout(textContent, baseViewport, syncMode);
+
+                        if (blocks.length >= 2) {
+                            log(`${pageNum}쪽: 텍스트 블록 ${blocks.length}개 감지. AI 번역 중...`);
+                            const batchSize = 25;
+                            for (let b = 0; b < blocks.length; b += batchSize) {
+                                const slice = blocks.slice(b, b + batchSize);
+                                const koArray = slice.map(item => item.koText);
+                                const transArray = await translatePdfBlocksBatch(koArray, targetLang, docType);
+                                slice.forEach((item, idx) => {
+                                    item.transText = (transArray[idx] || "").trim();
+                                });
+                            }
+                        } else {
+                            log(`${pageNum}쪽: 스캔/이미지 페이지 감지 -> AI Vision OCR 가동 중...`);
+                            blocks = await extractAndTranslatePageWithVision(previewCanvas, targetLang, docType);
+                        }
+
+                        pdfPagesModel.push({
+                            pageNumber: pageNum,
+                            pdfWidth: baseViewport.width,
+                            pdfHeight: baseViewport.height,
+                            displayWidth: previewCanvas.width,
+                            displayHeight: previewCanvas.height,
+                            previewCanvas,
+                            blocks: blocks.filter(b => b.transText && b.transText.length > 0)
+                        });
+                    }
+                }
+
+                updateProgress(95, "모바일·PC 반응형 자막 스튜디오 렌더링 중...");
+                renderPdfStudio();
+
+                updateProgress(100, "완료!");
+                setTimeout(() => {
+                    document.getElementById('status-section').classList.add('hidden');
+                    document.getElementById('success-title').textContent = `${targetLang} 자막 오버레이 완성!`;
+                    document.getElementById('success-desc').textContent = "자막을 터치/드래그하여 다듬거나, PDF 및 이미지로 바로 저장·공유하세요.";
+                    document.getElementById('pdf-studio-controls').classList.remove('hidden');
+                    document.getElementById('pdf-studio-wrapper').classList.remove('hidden');
+                    document.getElementById('success-section').classList.remove('hidden');
+                    applyResponsivePreviewScale();
+                }, 300);
+
+            } catch (error) {
+                console.error(error);
+                log(`에러 발생: ${error.message}`);
+                showToast(`처리 중 오류가 발생했습니다: ${error.message}`, 'error');
+            }
+        }
+
+        document.getElementById('pdf-input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handlePdfOrImageFile(e.target.files[0]);
+        });
+        document.getElementById('camera-input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handlePdfOrImageFile(e.target.files[0]);
+        });
+
+        async function extractTextFromPPTX(file) {
+            const zip = new JSZip();
+            const contents = await zip.loadAsync(file);
+            let fullText = "";
+
+            const slideFiles = Object.keys(contents.files)
+                .filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+                .sort((a, b) => {
+                    const numA = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
+                    const numB = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
+                    return numA - numB;
+                });
+
+            for (let idx = 0; idx < slideFiles.length; idx++) {
+                const slidePath = slideFiles[idx];
+                const xmlString = await contents.file(slidePath).async("string");
+                const textMatches = xmlString.match(/<a:t>.*?<\/a:t>/g);
+                if (textMatches) {
+                    const slideText = textMatches
+                        .map(match => match.replace(/<a:t>/g, "").replace(/<\/a:t>/g, "").trim())
+                        .filter(Boolean)
+                        .join(" ");
+                    if (slideText) fullText += `[슬라이드 ${idx + 1}] ${slideText}\n`;
+                }
+            }
+            return fullText.trim();
+        }
+
+        function cleanTopicName(rawFileName) {
+            return rawFileName
+                .replace(/\.(pptx?|pdf|hwpx?|jpe?g|png|webp)$/i, "")
+                .replace(/_/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+        }
+
+        async function summarizeTextsToWorksheet(text, targetLang, rawTitle) {
+            if (!text) return null;
+            const fallbackTitle = cleanTopicName(rawTitle || "오늘의 배움 학습지");
+            const prompt = `다음은 수업 자료 또는 안내문 텍스트입니다 (제목: ${fallbackTitle}):\n\n${text}\n\n당신은 다문화 학생들을 가르치는 친절한 선생님입니다.
+학생이 이 학습지만 읽어도 전체 흐름과 핵심 개념을 완벽히 이해할 수 있도록 2~3쪽 분량의 알찬 '오늘의 핵심 쏙쏙 학습지' 데이터를 만들어주세요.
+
+[작성 규칙]
+1. cleanTitleKo: 복잡한 파일명 코드나 기호를 빼고, 학생이 한눈에 알 수 있는 자연스러운 한국어 주제명
+2. cleanTitleTrans: 주제명의 자연스러운 ${targetLang} 번역
+3. goalKo / goalTrans: 오늘의 핵심 목표 또는 핵심 요약 1문장 (한국어 및 ${targetLang})
+4. summaryItems: 전체 내용을 흐름에 따라 가장 중요한 핵심 문장 8개로 체계적으로 정리하세요.
+   - 각 한국어 문장(ko)은 친절한 해요체("~해요", "~이에요")로 2줄 내외(60~95자)의 구체적이고 완성도 높은 문장으로 작성하세요.
+   - 각 번역 문장(trans)은 의미를 100% 정확하고 자연스럽게 전달하는 ${targetLang} 문장으로 작성하세요.
+5. vocabItems: 꼭 알아야 할 핵심 어휘 4개 (wordKo, wordTrans, descKo, descTrans)
+6. quizItems: 배운 내용을 스스로 점검할 수 있는 확인 문제 3개 (qKo, qTrans, answerKo, answerTrans)
+
+결과는 반드시 아래 JSON 형식으로만 반환하세요:
+{
+  "cleanTitleKo": "깔끔한 한국어 수업 주제",
+  "cleanTitleTrans": "${targetLang} 수업 주제",
+  "goalKo": "오늘의 학습 목표 한국어 문장",
+  "goalTrans": "오늘의 학습 목표 ${targetLang} 번역",
+  "summaryItems": [
+    {"ko": "핵심 요약 문장 1", "trans": "${targetLang} 번역 1"},
+    {"ko": "핵심 요약 문장 2", "trans": "${targetLang} 번역 2"},
+    {"ko": "핵심 요약 문장 3", "trans": "${targetLang} 번역 3"},
+    {"ko": "핵심 요약 문장 4", "trans": "${targetLang} 번역 4"},
+    {"ko": "핵심 요약 문장 5", "trans": "${targetLang} 번역 5"},
+    {"ko": "핵심 요약 문장 6", "trans": "${targetLang} 번역 6"},
+    {"ko": "핵심 요약 문장 7", "trans": "${targetLang} 번역 7"},
+    {"ko": "핵심 요약 문장 8", "trans": "${targetLang} 번역 8"}
+  ],
+  "vocabItems": [
+    {"wordKo": "핵심어휘1", "wordTrans": "번역어휘1", "descKo": "쉬운 한국어 뜻풀이", "descTrans": "${targetLang} 뜻풀이"}
+  ],
+  "quizItems": [
+    {"qKo": "1. 확인 문제 한국어 질문 (O / X)", "qTrans": "${targetLang} 질문 번역", "answerKo": "O", "answerTrans": "O"}
+  ]
+}`;
+
+            return await callGeminiAPI(prompt, "object");
+        }
+
+        function createWorksheetHeaderHTML(data, pageNum, totalPages) {
+            const titleKo = data.cleanTitleKo || cleanTopicName(originalFileName);
+            const titleTrans = data.cleanTitleTrans || "";
+            if (pageNum === 1) {
+                return `
+                    <div style="border-bottom: 3px solid #111827; padding-bottom: 16px; margin-bottom: 34px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+                            <div style="flex: 1; min-width: 0;">
+                                <h1 contenteditable="true" style="font-size: 2.15rem; color: #111827; margin: 0; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2;">오늘의 핵심 쏙쏙 학습지</h1>
+                                <p contenteditable="true" style="font-size: 1.05rem; color: #374151; margin: 12px 0 0 0; font-weight: 700; line-height: 1.45; word-break: keep-all;">
+                                    수업 주제: ${titleKo}
+                                </p>
+                                ${titleTrans ? `<p contenteditable="true" style="font-size: 0.92rem; color: #6b7280; margin: 4px 0 0 0; font-weight: 500; line-height: 1.35;">(${titleTrans})</p>` : ''}
+                            </div>
+                            <div style="flex-shrink: 0; text-align: right; padding-top: 6px;">
+                                <div style="font-size: 1.15rem; font-weight: 700; color: #111827; white-space: nowrap;">
+                                    이름: <span style="display: inline-block; width: 125px; border-bottom: 2px solid #94a3b8; margin-left: 4px;"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            return `
+                <div style="border-bottom: 2px solid #cbd5e1; padding-bottom: 12px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div contenteditable="true" style="font-size: 1.05rem; font-weight: 800; color: #334155;">
+                        오늘의 핵심 쏙쏙 학습지 <span style="font-weight: 600; color: #64748b; margin-left: 8px;">| ${titleKo}</span>
+                    </div>
+                    <div style="font-size: 0.9rem; font-weight: 700; color: #64748b;">
+                        ${pageNum} / ${totalPages}쪽
+                    </div>
+                </div>
+            `;
+        }
+
+        function createWorksheetFooterHTML(pageNum, totalPages, isLastPage) {
+            return `
+                <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; color: #94a3b8; font-size: 0.92rem; font-weight: 600;">
+                    <span>${isLastPage ? '- 선생님이 만든 특별한 이중언어 학습지 -' : '다음 쪽에 계속됩니다 →'}</span>
+                    <span>${pageNum} / ${totalPages}</span>
+                </div>
+            `;
+        }
+
+        function createSummaryItemHTML(item, number) {
+            return `
+                <div class="worksheet-item">
+                    <div class="item-num">${number}</div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div class="item-ko" contenteditable="true">${item.ko}</div>
+                        <div class="item-trans" contenteditable="true">${item.trans}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function wrapSheetInResponsiveSlot(sheetEl) {
+            const slot = document.createElement('div');
+            slot.className = 'a4-scale-slot';
+            slot.appendChild(sheetEl);
+            return slot;
+        }
+
+        function renderWorksheetPages(data, styleMode) {
+            const container = document.getElementById('worksheet-pages-container');
+            container.innerHTML = '';
+
+            const summaryItems = Array.isArray(data) ? data : (data.summaryItems || []);
+            const vocabItems = (!Array.isArray(data) && data.vocabItems) ? data.vocabItems : [];
+            const quizItems = (!Array.isArray(data) && data.quizItems) ? data.quizItems : [];
+
+            if (styleMode === 'classic') {
+                const itemsPerPage = 4;
+                const chunks = [];
+                for (let i = 0; i < summaryItems.length; i += itemsPerPage) {
+                    chunks.push(summaryItems.slice(i, i + itemsPerPage));
+                }
+                if (chunks.length === 0) chunks.push([]);
+
+                const totalPages = chunks.length;
+                chunks.forEach((chunk, pageIdx) => {
+                    const pageNum = pageIdx + 1;
+                    const isLastPage = pageNum === totalPages;
+                    const sheet = document.createElement('div');
+                    sheet.className = 'a4-sheet';
+
+                    const itemsHTML = chunk
+                        .map((item, idx) => createSummaryItemHTML(item, pageIdx * itemsPerPage + idx + 1))
+                        .join('');
+
+                    sheet.innerHTML = `
+                        <div>
+                            ${createWorksheetHeaderHTML(data, pageNum, totalPages)}
+                            <div>${itemsHTML}</div>
+                        </div>
+                        ${createWorksheetFooterHTML(pageNum, totalPages, isLastPage)}
+                    `;
+                    container.appendChild(wrapSheetInResponsiveSlot(sheet));
+                });
+            } else {
+                const page1Items = summaryItems.slice(0, 3);
+                const page2Items = summaryItems.slice(3, 8);
+                const totalPages = 3;
+
+                const sheet1 = document.createElement('div');
+                sheet1.className = 'a4-sheet';
+                const vocabHTML = vocabItems.slice(0, 4).map(v => `
+                    <div class="ws-vocab-card">
+                        <div contenteditable="true" style="font-size: 1.05rem; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">
+                            • ${v.wordKo} <span style="font-weight: 600; color: #3b82f6; font-size: 0.95rem;">(${v.wordTrans})</span>
+                        </div>
+                        <div contenteditable="true" style="font-size: 0.92rem; color: #1f2937; font-weight: 600; line-height: 1.4;">${v.descKo}</div>
+                        <div contenteditable="true" style="font-size: 0.84rem; color: #6b7280; margin-top: 2px; line-height: 1.35;">${v.descTrans}</div>
+                    </div>
+                `).join('');
+
+                sheet1.innerHTML = `
+                    <div>
+                        ${createWorksheetHeaderHTML(data, 1, totalPages)}
+                        ${vocabItems.length > 0 ? `
+                            <div class="ws-section-title">📖 꼭 알아야 할 핵심 어휘</div>
+                            <div class="ws-vocab-grid">${vocabHTML}</div>
+                        ` : ''}
+                        <div class="ws-section-title">✏️ 오늘의 핵심 내용 쏙쏙 (1)</div>
+                        <div>${page1Items.map((item, idx) => createSummaryItemHTML(item, idx + 1)).join('')}</div>
+                    </div>
+                    ${createWorksheetFooterHTML(1, totalPages, false)}
+                `;
+                container.appendChild(wrapSheetInResponsiveSlot(sheet1));
+
+                const sheet2 = document.createElement('div');
+                sheet2.className = 'a4-sheet';
+                sheet2.innerHTML = `
+                    <div>
+                        ${createWorksheetHeaderHTML(data, 2, totalPages)}
+                        <div class="ws-section-title">✏️ 오늘의 핵심 내용 쏙쏙 (2)</div>
+                        <div>${page2Items.map((item, idx) => createSummaryItemHTML(item, idx + 4)).join('')}</div>
+                    </div>
+                    ${createWorksheetFooterHTML(2, totalPages, false)}
+                `;
+                container.appendChild(wrapSheetInResponsiveSlot(sheet2));
+
+                const sheet3 = document.createElement('div');
+                sheet3.className = 'a4-sheet';
+                const quizHTML = quizItems.map(q => `
+                    <div class="ws-quiz-box">
+                        <div contenteditable="true" style="font-size: 1.15rem; font-weight: 700; color: #111827; margin-bottom: 6px; line-height: 1.45;">${q.qKo}</div>
+                        <div contenteditable="true" style="font-size: 1.0rem; color: #4b5563; font-weight: 500; margin-bottom: 12px; line-height: 1.4;">${q.qTrans}</div>
+                        <div style="display: flex; justify-content: flex-end;">
+                            <div style="border: 2px dashed #94a3b8; border-radius: 10px; padding: 6px 24px; font-weight: 700; color: #64748b; font-size: 0.95rem;">
+                                답 (Answer): &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                const answerKeyText = quizItems.map((q, i) => `${i + 1}번: ${q.answerKo}`).join('  |  ');
+
+                sheet3.innerHTML = `
+                    <div>
+                        ${createWorksheetHeaderHTML(data, 3, totalPages)}
+                        ${data.goalKo ? `
+                            <div class="ws-section-title">🎯 오늘의 핵심 한마디</div>
+                            <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 16px 20px; border-radius: 8px; margin-bottom: 28px;">
+                                <div contenteditable="true" style="font-size: 1.2rem; font-weight: 700; color: #111827; margin-bottom: 6px;">${data.goalKo}</div>
+                                <div contenteditable="true" style="font-size: 1.05rem; color: #4b5563; font-weight: 500;">${data.goalTrans || ''}</div>
+                            </div>
+                        ` : ''}
+                        <div class="ws-section-title">✅ 배운 내용을 스스로 확인해요!</div>
+                        <div>${quizHTML}</div>
+                        ${answerKeyText ? `
+                            <div style="margin-top: 24px; text-align: right; font-size: 0.85rem; color: #94a3b8; font-weight: 600;" contenteditable="true">
+                                [정답 확인] ${answerKeyText}
+                            </div>
+                        ` : ''}
+                    </div>
+                    ${createWorksheetFooterHTML(3, totalPages, true)}
+                `;
+                container.appendChild(wrapSheetInResponsiveSlot(sheet3));
+            }
+
+            currentZoomMode = 'fit';
+            setTimeout(applyResponsivePreviewScale, 60);
+        }
+
+        document.getElementById('style-btn-classic').addEventListener('click', () => {
+            if (!pptWorksheetData) return;
+            currentWorksheetStyle = 'classic';
+            document.getElementById('style-btn-classic').classList.add('active');
+            document.getElementById('style-btn-workbook').classList.remove('active');
+            renderWorksheetPages(pptWorksheetData, 'classic');
+        });
+
+        document.getElementById('style-btn-workbook').addEventListener('click', () => {
+            if (!pptWorksheetData) return;
+            currentWorksheetStyle = 'workbook';
+            document.getElementById('style-btn-workbook').classList.add('active');
+            document.getElementById('style-btn-classic').classList.remove('active');
+            renderWorksheetPages(pptWorksheetData, 'workbook');
+        });
+
+        async function handlePptFile(file) {
+            if (!file) return;
+            originalFileName = file.name;
+            const targetLang = getSelectedTargetLanguage();
+
+            document.getElementById('ppt-section').classList.add('hidden');
+            document.getElementById('language-section').classList.add('hidden');
+            document.getElementById('top-mode-tabs').classList.add('hidden');
+            document.getElementById('status-section').classList.remove('hidden');
+            document.getElementById('header-reset-btn').classList.remove('hidden');
+
+            try {
+                log(`[PPT 모드] 파일 분석 중... (${file.name})`);
+                updateProgress(15, "PPT 슬라이드 텍스트 추출 중...");
+                const extractedText = await extractTextFromPPTX(file);
+                if (!extractedText) throw new Error("PPT에서 텍스트를 찾을 수 없습니다.");
+
+                updateProgress(45, `AI가 2~3쪽 분량으로 핵심 요약 및 ${targetLang} 번역 중...`);
+                const summaryData = await summarizeTextsToWorksheet(extractedText, targetLang, originalFileName);
+                if (!summaryData || !summaryData.summaryItems) throw new Error("AI 요약 결과를 생성하지 못했습니다.");
+
+                pptWorksheetData = summaryData;
+                currentWorksheetStyle = 'classic';
+                document.getElementById('style-btn-classic').classList.add('active');
+                document.getElementById('style-btn-workbook').classList.remove('active');
+
+                updateProgress(90, "A4 이중언어 학습지 조판 중...");
+                renderWorksheetPages(pptWorksheetData, currentWorksheetStyle);
+
+                updateProgress(100, "완료!");
+                setTimeout(() => {
+                    document.getElementById('status-section').classList.add('hidden');
+                    document.getElementById('success-title').textContent = `${targetLang} 요약 학습지 완성!`;
+                    document.getElementById('success-desc').textContent = "문구를 탭해 직접 수정하거나, 인쇄용 PDF 및 메신저 공유용 이미지로 저장하세요.";
+                    document.getElementById('ppt-preview-controls').classList.remove('hidden');
+                    document.getElementById('worksheet-preview-wrapper').classList.remove('hidden');
+                    document.getElementById('success-section').classList.remove('hidden');
+                    applyResponsivePreviewScale();
+                }, 300);
+            } catch (error) {
+                console.error(error);
+                log(`에러 발생: ${error.message}`);
+                showToast(`오류: ${error.message}`, 'error');
+            }
+        }
+
+        document.getElementById('ppt-input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handlePptFile(e.target.files[0]);
+        });
+
+        // 모드 3: 텍스트 직접 입력 예시 및 변환
+        document.getElementById('sample-lesson-btn').addEventListener('click', () => {
+            document.getElementById('direct-title-input').value = "표준어와 방언을 사용하는 상황 알아보기";
+            document.getElementById('direct-body-input').value = `표준어는 한 나라에서 모든 사람이 공통으로 쓰는 규범이 되는 말이에요. 반면에 방언(사투리)은 특정 지역에서 오랫동안 사용해 온 그 지역만의 고유한 말이에요.
+뉴스 방송이나 공식적인 발표처럼 여러 지역 사람들에게 정확한 정보를 전달해야 할 때는 표준어를 사용하는 것이 좋아요.
+가족이나 고향 친구들과 정겹게 이야기를 나눌 때는 방언을 사용하면 더욱 친밀하고 따뜻한 느낌을 줄 수 있어요.
+대화하는 상대방과 장소, 상황에 맞추어 표준어와 방언을 알맞게 선택하여 사용하는 태도가 중요해요.`;
+        });
+
+        document.getElementById('sample-notice-btn').addEventListener('click', () => {
+            document.getElementById('direct-title-input').value = "가을 현장체험학습 안내 가정통신문";
+            document.getElementById('direct-body-input').value = `1. 일시: 10월 23일(금) 오전 8시 50분까지 교실로 등교합니다.
+2. 장소: 국립중앙과학관 및 생태공원
+3. 준비물: 점심 도시락, 물, 돗자리, 필기도구, 편안한 운동화와 복장
+4. 주의사항: 차량 이동 시 안전벨트를 반드시 착용하고, 친구들과 줄을 맞추어 안전하게 이동합니다. 멀미가 있는 학생은 미리 멀미약을 복용해 주세요.`;
+        });
+
+        document.getElementById('generate-direct-btn').addEventListener('click', async () => {
+            const title = document.getElementById('direct-title-input').value.trim() || "오늘의 배움 안내 학습지";
+            const body = document.getElementById('direct-body-input').value.trim();
+            if (!body) {
+                showToast("변환할 본문 텍스트를 입력해 주세요!", "error");
+                return;
+            }
+            originalFileName = title;
+            const targetLang = getSelectedTargetLanguage();
+
+            document.getElementById('text-section').classList.add('hidden');
+            document.getElementById('language-section').classList.add('hidden');
+            document.getElementById('top-mode-tabs').classList.add('hidden');
+            document.getElementById('status-section').classList.remove('hidden');
+            document.getElementById('header-reset-btn').classList.remove('hidden');
+
+            try {
+                log(`[텍스트 직접 변환 모드] AI 구성 시작... (${title})`);
+                updateProgress(35, `입력된 내용을 분석하여 ${targetLang} 이중언어 학습지로 구성 중...`);
+                const summaryData = await summarizeTextsToWorksheet(body, targetLang, title);
+                if (!summaryData || !summaryData.summaryItems) throw new Error("AI 학습지 데이터를 생성하지 못했습니다.");
+
+                pptWorksheetData = summaryData;
+                currentWorksheetStyle = 'classic';
+                document.getElementById('style-btn-classic').classList.add('active');
+                document.getElementById('style-btn-workbook').classList.remove('active');
+
+                updateProgress(90, "A4 이중언어 학습지 조판 중...");
+                renderWorksheetPages(pptWorksheetData, currentWorksheetStyle);
+
+                updateProgress(100, "완료!");
+                setTimeout(() => {
+                    document.getElementById('status-section').classList.add('hidden');
+                    document.getElementById('success-title').textContent = `${targetLang} 맞춤 학습지 완성!`;
+                    document.getElementById('success-desc').textContent = "문구를 탭해 직접 수정하거나, PDF 및 이미지로 저장·공유하세요.";
+                    document.getElementById('ppt-preview-controls').classList.remove('hidden');
+                    document.getElementById('worksheet-preview-wrapper').classList.remove('hidden');
+                    document.getElementById('success-section').classList.remove('hidden');
+                    applyResponsivePreviewScale();
+                }, 300);
+            } catch (err) {
+                console.error(err);
+                showToast(`오류: ${err.message}`, 'error');
+            }
+        });
+
+        async function callGeminiAPI(prompt, returnType = "array") {
+            return runWithConcurrencyLimit(async () => {
+                const apiKey = userCustomApiKey || "";
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+
+                let retries = 4;
+                let delay = 1000;
+                while (retries > 0) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const result = await response.json();
+                        if (result.error) throw new Error(result.error.message);
+                        if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+                            const jsonStr = cleanJSONString(result.candidates[0].content.parts[0].text);
+                            return JSON.parse(jsonStr);
+                        }
+                        throw new Error("응답 형식 오류");
+                    } catch (error) {
+                        retries--;
+                        if (retries > 0) {
+                            // 다중 접속 시 동시 재시도 충돌(Thundering Herd)을 막기 위한 랜덤 지터(Jitter) 지연
+                            const jitter = Math.floor(Math.random() * 450);
+                            await new Promise(resolve => setTimeout(resolve, delay + jitter));
+                            delay *= 2;
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+                return returnType === "array" ? [] : null;
+            });
+        }
+
+        async function callGeminiVisionAPI(prompt, base64Jpeg) {
+            return runWithConcurrencyLimit(async () => {
+                const apiKey = userCustomApiKey || "";
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType: "image/jpeg", data: base64Jpeg } }
+                        ]
+                    }],
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+
+                let retries = 4;
+                let delay = 1000;
+                while (retries > 0) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const result = await response.json();
+                        if (result.error) throw new Error(result.error.message);
+                        if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+                            return JSON.parse(cleanJSONString(result.candidates[0].content.parts[0].text));
+                        }
+                        throw new Error("비전 응답 형식 오류");
+                    } catch (err) {
+                        retries--;
+                        if (retries > 0) {
+                            const jitter = Math.floor(Math.random() * 450);
+                            await new Promise(r => setTimeout(r, delay + jitter));
+                            delay *= 2;
+                        } else {
+                            return [];
+                        }
+                    }
+                }
+                return [];
+            });
+        }
+
+        function renderPageSubtitlesToTransparentCanvas(pageData, renderScale = 3.0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(pageData.pdfWidth * renderScale);
+            canvas.height = Math.round(pageData.pdfHeight * renderScale);
+            const ctx = canvas.getContext('2d');
+
+            ctx.textBaseline = 'top';
+            const fontFamily = "'Pretendard', 'Noto Sans KR', 'Noto Sans', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans Devanagari', 'Noto Sans Thai', 'Noto Sans Arabic', sans-serif";
+
+            for (const block of pageData.blocks) {
+                const text = (block.transText || "").trim();
+                if (!text) continue;
+
+                const x = block.xRatio * canvas.width;
+                const y = block.yRatio * canvas.height;
+                const maxW = block.wRatio * canvas.width;
+                const fontSize = Math.max(7.5 * renderScale, block.fontRatio * canvas.height * pdfSubtitleStyle.scale);
+                const lineHeight = fontSize * 1.24;
+
+                ctx.font = `600 ${fontSize}px ${fontFamily}`;
+                const wrappedLines = wrapMultilingualText(ctx, text, maxW);
+
+                if (pdfSubtitleStyle.bgMode === 'box') {
+                    let maxLineW = 0;
+                    for (const l of wrappedLines) maxLineW = Math.max(maxLineW, ctx.measureText(l).width);
+                    const padX = 4 * renderScale;
+                    const padY = 2 * renderScale;
+                    const boxH = wrappedLines.length * lineHeight + padY * 2;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.90)';
+                    ctx.fillRect(x - padX, y - padY, Math.min(maxW + padX * 2, maxLineW + padX * 2), boxH);
+                }
+
+                let curY = y;
+                for (const lineStr of wrappedLines) {
+                    if (pdfSubtitleStyle.bgMode === 'halo') {
+                        ctx.save();
+                        ctx.lineJoin = 'round';
+                        ctx.miterLimit = 2;
+                        ctx.lineWidth = Math.max(2.2, fontSize * 0.18);
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.96)';
+                        ctx.strokeText(lineStr, x, curY);
+                        ctx.restore();
+                    }
+                    ctx.fillStyle = pdfSubtitleStyle.color;
+                    ctx.fillText(lineStr, x, curY);
+                    curY += lineHeight;
+                }
+            }
+            return canvas;
+        }
+
+        function wrapMultilingualText(ctx, text, maxWidth) {
+            const rawParagraphs = text.split('\n');
+            const lines = [];
+            for (const para of rawParagraphs) {
+                const trimmed = para.trim();
+                if (!trimmed) continue;
+                const hasSpaces = trimmed.includes(' ');
+                const tokens = hasSpaces ? trimmed.split(/\s+/) : Array.from(trimmed);
+                const joiner = hasSpaces ? ' ' : '';
+
+                let currentLine = tokens[0] || '';
+                for (let i = 1; i < tokens.length; i++) {
+                    const token = tokens[i];
+                    const testLine = currentLine + joiner + token;
+                    if (ctx.measureText(testLine).width <= maxWidth) {
+                        currentLine = testLine;
+                    } else {
+                        lines.push(currentLine);
+                        currentLine = token;
+                    }
+                }
+                if (currentLine) lines.push(currentLine);
+            }
+            return lines;
+        }
+
+        async function captureA4SheetsUnscaled() {
+            const sheets = Array.from(document.querySelectorAll('#worksheet-pages-container .a4-sheet'));
+            const canvases = [];
+            for (const sheet of sheets) {
+                const prevTransform = sheet.style.transform;
+                sheet.style.transform = 'none';
+                const canvas = await html2canvas(sheet, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: 794,
+                    windowWidth: 1200
+                });
+                sheet.style.transform = prevTransform;
+                canvases.push(canvas);
+            }
+            return canvases;
+        }
+
+        async function buildFinalPdfBlob() {
+            const targetLang = getSelectedTargetLanguage();
+            const { PDFDocument } = PDFLib;
+
+            if (currentMode === 'pdf' && rawPdfLibBuffer && pdfPagesModel.length > 0) {
+                const pdfDoc = await PDFDocument.load(rawPdfLibBuffer.slice(0));
+                const docPages = pdfDoc.getPages();
+
+                for (let i = 0; i < docPages.length; i++) {
+                    const pageData = pdfPagesModel[i];
+                    if (!pageData || pageData.blocks.length === 0) continue;
+                    const pdfPage = docPages[i];
+                    const { width, height } = pdfPage.getSize();
+
+                    const overlayCanvas = renderPageSubtitlesToTransparentCanvas(pageData, 3.0);
+                    const pngDataUrl = overlayCanvas.toDataURL('image/png');
+                    const pngImage = await pdfDoc.embedPng(pngDataUrl);
+                    pdfPage.drawImage(pngImage, { x: 0, y: 0, width, height });
+                }
+                const finalPdfBytes = await pdfDoc.save();
+                const fileName = cleanTopicName(originalFileName) + `_${targetLang}병기.pdf`;
+                return { blob: new Blob([finalPdfBytes], { type: "application/pdf" }), fileName };
+            } else {
+                const canvases = await captureA4SheetsUnscaled();
+                const pdfDoc = await PDFDocument.create();
+                for (const canvas of canvases) {
+                    const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
+                    const jpgImage = await pdfDoc.embedJpg(imgDataUrl);
+                    const page = pdfDoc.addPage([595.28, 841.89]);
+                    page.drawImage(jpgImage, { x: 0, y: 0, width: 595.28, height: 841.89 });
+                }
+                const pdfBytes = await pdfDoc.save();
+                const fileName = cleanTopicName(originalFileName) + `_${targetLang}_학습지.pdf`;
+                return { blob: new Blob([pdfBytes], { type: "application/pdf" }), fileName };
+            }
+        }
+
+        document.getElementById('download-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('download-btn');
+            const btnText = document.getElementById('download-btn-text');
+            try {
+                btn.disabled = true;
+                btnText.textContent = "PDF 생성 중...";
+                const { blob, fileName } = await buildFinalPdfBlob();
+                const link = document.createElement('a');
+                link.href = registerObjectUrl(URL.createObjectURL(blob));
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast("고화질 PDF 다운로드가 시작되었습니다!", "success");
+            } catch (err) {
+                console.error(err);
+                showToast("PDF 저장 중 오류가 발생했습니다.", "error");
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = "인쇄용 PDF 저장";
+            }
+        });
+
+        // 모바일 메신저(카카오톡 등) 전송용 고화질 PNG 이미지 저장
+        document.getElementById('download-img-btn').addEventListener('click', async () => {
+            const targetLang = getSelectedTargetLanguage();
+            try {
+                showToast("고화질 이미지를 생성하고 있습니다...", "info");
+                if (currentMode === 'pdf' && pdfPagesModel.length > 0) {
+                    const firstPage = pdfPagesModel[0];
+                    const mergedCanvas = document.createElement('canvas');
+                    mergedCanvas.width = firstPage.displayWidth * 2;
+                    mergedCanvas.height = firstPage.displayHeight * 2;
+                    const ctx = mergedCanvas.getContext('2d');
+                    ctx.drawImage(firstPage.previewCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
+                    const subCanvas = renderPageSubtitlesToTransparentCanvas(firstPage, (firstPage.displayWidth * 2) / firstPage.pdfWidth);
+                    ctx.drawImage(subCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
+
+                    const link = document.createElement('a');
+                    link.href = mergedCanvas.toDataURL('image/png');
+                    link.download = `${cleanTopicName(originalFileName)}_${targetLang}_1쪽.png`;
+                    link.click();
+                } else {
+                    const canvases = await captureA4SheetsUnscaled();
+                    canvases.forEach((canvas, idx) => {
+                        const link = document.createElement('a');
+                        link.href = canvas.toDataURL('image/png');
+                        link.download = `${cleanTopicName(originalFileName)}_${targetLang}_${idx + 1}쪽.png`;
+                        link.click();
+                    });
+                }
+                showToast("이미지(PNG) 저장이 완료되었습니다!", "success");
+            } catch (err) {
+                console.error(err);
+                showToast("이미지 저장 중 오류가 발생했습니다.", "error");
+            }
+        });
+
+        // 모바일 네이티브 공유 시트 (카카오톡, 클래스팅, 이메일 등 즉시 공유)
+        document.getElementById('mobile-share-btn').addEventListener('click', async () => {
+            try {
+                const { blob, fileName } = await buildFinalPdfBlob();
+                const file = new File([blob], fileName, { type: "application/pdf" });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: fileName,
+                        text: '다문화 이음 AI 스튜디오에서 생성한 이중언어 학습지입니다.',
+                        files: [file]
+                    });
+                } else {
+                    // 파일 직접 공유 미지원 브라우저에서는 즉시 다운로드로 폴백
+                    const link = document.createElement('a');
+                    link.href = registerObjectUrl(URL.createObjectURL(blob));
+                    link.download = fileName;
+                    link.click();
+                    showToast("현재 브라우저에서는 파일 다운로드로 자동 전환되었습니다.", "info");
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    showToast("공유 기능을 실행할 수 없어 PDF 다운로드 버튼을 이용해 주세요.", "info");
+                }
+            }
+        });
+    </script>
+</body>
+</html>

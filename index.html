@@ -9,19 +9,24 @@
     <meta name="apple-mobile-web-app-title" content="이중언어 에듀">
     <title>다문화 이음 AI - 범용 이중언어 교과서·학습지 스튜디오</title>
 
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js 및 worker 안전 로드 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+    <script>
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cfb/1.2.2/cfb.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Noto+Sans:wght@500;700&family=Noto+Sans+KR:wght@500;700&family=Noto+Sans+SC:wght@500;700&family=Noto+Sans+JP:wght@500;700&family=Noto+Sans+Devanagari:wght@500;700&family=Noto+Sans+Arabic:wght@500;700&family=Noto+Sans+Thai:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --font-multilingual: 'Pretendard', 'Noto Sans KR', 'Noto Sans', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans Devanagari', 'Noto Sans Thai', 'Noto Sans Arabic', sans-serif;
+            --font-multilingual: 'Noto Sans KR', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
         }
         body {
             font-family: var(--font-multilingual);
@@ -91,22 +96,23 @@
             position: absolute;
             z-index: 20;
             cursor: grab;
-            padding: 2px 4px;
+            padding: 2px 5px;
             border-radius: 4px;
             border: 1.5px dashed transparent;
             transition: border-color 0.15s, background-color 0.15s;
-            line-height: 1.24;
+            line-height: 1.32;
+            letter-spacing: -0.01em;
             word-break: keep-all;
             overflow-wrap: break-word;
             font-family: var(--font-multilingual);
-            font-weight: 600;
+            font-weight: 700;
             touch-action: none;
         }
         .pdf-subtitle-item:hover,
         .pdf-subtitle-item:focus-within,
         .pdf-subtitle-item.selected-sub {
             border-color: #2563eb;
-            background-color: rgba(239, 246, 255, 0.72);
+            background-color: rgba(239, 246, 255, 0.78);
             z-index: 35;
         }
         .pdf-subtitle-item:active {
@@ -114,11 +120,15 @@
         }
         .subtitle-style-halo .sub-text {
             text-shadow:
-                -1.3px -1.3px 0 rgba(255,255,255,0.97),
-                 1.3px -1.3px 0 rgba(255,255,255,0.97),
-                -1.3px  1.3px 0 rgba(255,255,255,0.97),
-                 1.3px  1.3px 0 rgba(255,255,255,0.97),
-                 0px    0px   3px rgba(255,255,255,0.95);
+                -1.6px -1.6px 0 rgba(255,255,255,0.99),
+                 1.6px -1.6px 0 rgba(255,255,255,0.99),
+                -1.6px  1.6px 0 rgba(255,255,255,0.99),
+                 1.6px  1.6px 0 rgba(255,255,255,0.99),
+                 0px   -1.6px 0 rgba(255,255,255,0.99),
+                 0px    1.6px 0 rgba(255,255,255,0.99),
+                -1.6px  0px   0 rgba(255,255,255,0.99),
+                 1.6px  0px   0 rgba(255,255,255,0.99),
+                 0px    1px   4px rgba(255,255,255,0.98);
         }
         .subtitle-style-plain .sub-text {
             text-shadow: none;
@@ -285,10 +295,10 @@
 
 <body class="min-h-screen flex flex-col pb-20 md:pb-10">
 
-    <!-- 커스텀 토스트 알림창 (alert 대체) -->
+    <!-- 커스텀 토스트 알림창 -->
     <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[92%] max-w-md"></div>
 
-    <!-- 상단 앱 헤더 (데스크톱 & 모바일 공통) -->
+    <!-- 상단 앱 헤더 -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
             <div class="flex items-center gap-2.5 min-w-0">
@@ -326,7 +336,7 @@
 
     <main class="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 pt-4 sm:pt-6">
 
-        <!-- 데스크톱 & 태블릿 상단 모드 전환 탭 (모바일에서는 하단 네비게이션 바와 연동) -->
+        <!-- 모드 전환 탭 -->
         <div id="top-mode-tabs" class="grid grid-cols-3 gap-1.5 sm:gap-2 bg-slate-200/80 p-1.5 rounded-2xl mb-5">
             <button id="tab-pdf" type="button" class="nav-tab active py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-700 transition-all flex items-center justify-center gap-1.5">
                 <span>📄</span>
@@ -355,7 +365,7 @@
                         <span class="text-xs text-slate-500 font-medium">💡 목록에 없는 언어도 '직접 입력'으로 전 세계 모든 언어 지원</span>
                     </div>
 
-                    <!-- 자주 쓰는 12개 다문화 언어 그리드 -->
+                    <!-- 12개 다문화 언어 그리드 -->
                     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                         <label class="cursor-pointer">
                             <input type="radio" name="lang" value="러시아어" class="peer sr-only" checked>
@@ -410,7 +420,7 @@
                     <!-- 기타 언어 직접 입력창 -->
                     <div id="custom-lang-wrapper" class="hidden mt-3 bg-indigo-50/70 p-3 rounded-xl border border-indigo-200 flex items-center gap-3">
                         <span class="text-xs font-bold text-indigo-800 whitespace-nowrap">🌐 언어명 입력:</span>
-                        <input type="text" id="custom-lang-input" placeholder="예: 스페인어, 아랍어, 인도네시아어, 크메르어, 미얀마어 등" class="w-full rounded-lg border border-indigo-300 px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white">
+                        <input type="text" id="custom-lang-input" placeholder="예: 스페인어, 아랍어, 인도네시아어 등" class="w-full rounded-lg border border-indigo-300 px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white">
                     </div>
                 </div>
 
@@ -425,10 +435,11 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">🎯 자막 위치 싱크 방식</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">🎯 자막 위치 싱크 및 줄바꿈 방식</label>
                         <select id="pdf-sync-mode" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 focus:border-blue-500 focus:outline-none">
-                            <option value="line">줄 단위 행간 밀착 병기 (각 한글 줄 바로 아래 배치 - 추천)</option>
-                            <option value="paragraph">문단 단위 하단 병기 (문단 마지막 줄 아래에 묶어서 배치)</option>
+                            <option value="smart" selected>스마트 문장·문단 병기 (이어지는 줄을 묶어 문장 아래 여백에 배치 - 추천)</option>
+                            <option value="paragraph">문단 전체 통합 병기 (문단 마지막 줄 아래에 한꺼번에 배치)</option>
+                            <option value="line">개별 줄 단위 병기 (줄 간격이 아주 넓은 학습지용)</option>
                         </select>
                     </div>
                 </div>
@@ -455,7 +466,7 @@
                         <span class="text-[11px] font-extrabold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full">학습지 사진·스캔본</span>
                     </div>
                     <h3 class="text-base sm:text-lg font-extrabold text-slate-800 mb-1">여기를 탭하여 PDF, 한글(HWP/HWPX) 또는 학습지 이미지 선택</h3>
-                    <p class="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">학교에서 바로 쓰시는 <strong>한글(.hwp, .hwpx) 학습지·시험지·가정통신문</strong>이나 <strong>PDF 교과서</strong>를 넣으면, 각 한글 문장 바로 아래에 다국어 자막을 병기하여 <strong>인쇄용 PDF 파일</strong>로 만들어 드립니다.</p>
+                    <p class="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">학교에서 바로 쓰시는 한글(.hwp, .hwpx) 학습지나 PDF 교과서를 넣으면 인쇄용 이중언어 PDF로 자동 변환됩니다.</p>
 
                     <div class="mt-5 flex flex-wrap justify-center gap-2.5">
                         <button type="button" id="btn-select-pdf" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm flex items-center gap-1.5">
@@ -487,7 +498,7 @@
                         </svg>
                     </div>
                     <h3 class="text-base sm:text-lg font-extrabold text-slate-800 mb-1">여기를 탭하여 수업용 PPT(.pptx) 선택</h3>
-                    <p class="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">슬라이드의 핵심 내용을 추출하여 학생 눈높이에 맞춘 2~3쪽 분량의 A4 이중언어 학습지(핵심 문장·어휘·확인 문제)로 만들어 줍니다.</p>
+                    <p class="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">슬라이드의 핵심 내용을 추출하여 초등학생 눈높이에 맞춘 2~3쪽 분량의 A4 이중언어 학습지로 만들어 줍니다.</p>
                     <div class="mt-5">
                         <span class="inline-flex px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm shadow-sm">📂 PPTX 파일 찾아보기</span>
                     </div>
@@ -513,8 +524,8 @@
                         <input type="text" id="direct-title-input" placeholder="예: 5학년 과학 - 태양계와 별 / 현장체험학습 안내 알림장" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-semibold focus:outline-none focus:border-emerald-600 bg-white">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">📝 본문 내용 입력 (교과서 지문, 수업 노트, 알림장 내용 등을 자유롭게 붙여넣으세요)</label>
-                        <textarea id="direct-body-input" rows="5" placeholder="여기에 한국어 수업 내용이나 알림장 문구를 입력하면, AI가 다문화 학생이 이해하기 쉬운 체계적인 2~3쪽 이중언어 학습지(또는 안내장)로 자동 구성해 줍니다." class="w-full rounded-xl border border-slate-300 p-3.5 text-sm leading-relaxed focus:outline-none focus:border-emerald-600 bg-white"></textarea>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">📝 본문 내용 입력 (교과서 지문, 수업 노트, 알림장 내용을 자유롭게 붙여넣으세요)</label>
+                        <textarea id="direct-body-input" rows="5" placeholder="여기에 한국어 수업 내용이나 알림장 문구를 입력하면, AI가 다문화 학생이 이해하기 쉬운 체계적인 이중언어 학습지로 구성해 줍니다." class="w-full rounded-xl border border-slate-300 p-3.5 text-sm leading-relaxed focus:outline-none focus:border-emerald-600 bg-white"></textarea>
                     </div>
                     <button type="button" id="generate-direct-btn" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2">
                         <span>✨ AI 이중언어 학습지로 변환하기</span>
@@ -539,7 +550,7 @@
             </div>
 
             <div id="success-section" class="hidden pt-2">
-                <!-- 상단 완료 배너 및 내보내기(PDF / 이미지 / 모바일 공유) 버튼 바 -->
+                <!-- 완료 배너 및 내보내기 버튼 바 -->
                 <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-slate-50 border border-blue-200 rounded-2xl p-4 sm:p-5 mb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div class="flex items-start sm:items-center gap-3">
                         <div class="w-11 h-11 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
@@ -547,7 +558,7 @@
                         </div>
                         <div>
                             <h3 class="text-base sm:text-xl font-extrabold text-slate-900" id="success-title">변환 완료!</h3>
-                            <p class="text-xs sm:text-sm text-slate-600 mt-0.5" id="success-desc">화면을 터치하거나 클릭하여 내용을 자유롭게 수정한 뒤 저장·공유하세요.</p>
+                            <p class="text-xs sm:text-sm text-slate-600 mt-0.5" id="success-desc">화면을 터치하거나 클릭하여 내용을 수정하고 저장하세요.</p>
                         </div>
                     </div>
 
@@ -584,8 +595,8 @@
                 <div id="pdf-studio-controls" class="hidden mb-4 bg-slate-100 p-3.5 sm:p-4 rounded-2xl border border-slate-200 text-left space-y-3">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-200 pb-3">
                         <div>
-                            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">터치 & 마우스 자막 스튜디오</span>
-                            <h4 class="text-xs sm:text-sm font-bold text-slate-800 mt-1">자막을 손가락/마우스로 끌어 위치를 옮기거나, 탭하여 문구를 직접 수정하세요.</h4>
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">자막 편집 스튜디오</span>
+                            <h4 class="text-xs sm:text-sm font-bold text-slate-800 mt-1">자막을 드래그하여 위치를 옮기거나 탭하여 수정하세요.</h4>
                         </div>
                         <button id="add-pdf-subtitle-btn" type="button" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all self-start sm:self-auto">
                             ➕ 새 자막 추가
@@ -595,14 +606,14 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div class="bg-white p-3 rounded-xl border border-slate-200">
                             <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                                <span>🔠 자막 글자 크기</span>
+                                <span>🔠 글자 크기</span>
                                 <span id="pdf-font-scale-label" class="text-blue-600">100%</span>
                             </div>
                             <input id="pdf-font-scale" type="range" min="70" max="145" value="100" step="5" class="w-full accent-blue-600 cursor-pointer">
                         </div>
 
                         <div class="bg-white p-3 rounded-xl border border-slate-200">
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5">🎨 자막 글자 색상</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">🎨 글자 색상</label>
                             <div class="flex items-center gap-2.5">
                                 <button type="button" data-color="#1d4ed8" class="pdf-color-btn w-6 h-6 rounded-full bg-blue-700 ring-2 ring-offset-2 ring-blue-600"></button>
                                 <button type="button" data-color="#0f172a" class="pdf-color-btn w-6 h-6 rounded-full bg-slate-900"></button>
@@ -613,11 +624,11 @@
                         </div>
 
                         <div class="bg-white p-3 rounded-xl border border-slate-200">
-                            <label class="block text-xs font-bold text-slate-700 mb-1">✨ 자막 가독성 모드</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">✨ 가독성 모드</label>
                             <select id="pdf-bg-style" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-slate-700">
-                                <option value="halo" selected>미세 흰색 외곽선 (원본 안 가리고 선명)</option>
-                                <option value="plain">순수 투명 글자 (배경·외곽선 없음)</option>
-                                <option value="box">반투명 흰색 배경 박스 (복잡한 배경 위)</option>
+                                <option value="halo" selected>미세 흰색 외곽선 (추천)</option>
+                                <option value="plain">순수 투명 글자</option>
+                                <option value="box">반투명 백색 박스</option>
                             </select>
                         </div>
                     </div>
@@ -626,26 +637,26 @@
                 <div id="ppt-preview-controls" class="hidden mb-4 bg-slate-100 p-3.5 sm:p-4 rounded-2xl border border-slate-200 text-left">
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div>
-                            <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">A4 학습지 레이아웃 & 문구 직접 편집</span>
-                            <h4 class="text-xs sm:text-sm font-bold text-slate-800 mt-1">원하는 학습지 양식을 선택하세요. 모든 텍스트는 탭하여 직접 수정할 수 있습니다.</h4>
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">학습지 양식 선택</span>
+                            <h4 class="text-xs sm:text-sm font-bold text-slate-800 mt-1">원하는 학습지 형식을 고르고 탭하여 문구를 수정하세요.</h4>
                         </div>
                         <div class="flex gap-2 flex-wrap">
                             <button id="style-btn-classic" type="button" class="style-switch-btn active px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 bg-white text-slate-700 transition-all">
                                 📄 핵심 문장 집중형 (2쪽)
                             </button>
                             <button id="style-btn-workbook" type="button" class="style-switch-btn px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 bg-white text-slate-700 transition-all">
-                                📘 표준 워크북형 (어휘+문장+퀴즈 3쪽)
+                                📘 표준 워크북형 (3쪽)
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- PDF 자막 편집 스튜디오 뷰어 -->
+                <!-- PDF 자막 스튜디오 뷰어 -->
                 <div id="pdf-studio-wrapper" class="hidden bg-slate-200/80 p-2 sm:p-6 rounded-2xl border border-slate-300">
                     <div id="pdf-studio-pages-container" class="studio-scale-outer"></div>
                 </div>
 
-                <!-- PPT & 텍스트 A4 학습지 미리보기 뷰어 -->
+                <!-- PPT 학습지 뷰어 -->
                 <div id="worksheet-preview-wrapper" class="hidden bg-slate-200/80 p-2 sm:p-6 rounded-2xl border border-slate-300">
                     <div id="worksheet-pages-container" class="studio-scale-outer"></div>
                 </div>
@@ -669,45 +680,32 @@
         </button>
     </nav>
 
-    <!-- 다중 접속 & 웹사이트 서버 설정 모달 -->
+    <!-- 서버 설정 모달 -->
     <div id="concurrency-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[88vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2">
                     <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                    <h3 class="text-lg font-extrabold text-slate-900">⚡ 다중 사용자 접속 & 배포 관리</h3>
+                    <h3 class="text-lg font-extrabold text-slate-900">⚡ 다중 사용자 접속 설정</h3>
                 </div>
                 <button id="close-concurrency-btn" type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-600">✕</button>
             </div>
 
             <div class="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
                 <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-                    <div class="font-extrabold text-emerald-900 mb-1">✅ 무서버(Serverless) 클라이언트 분산 아키텍처 가동 중</div>
-                    • <strong>세션 독립성 100% 보장:</strong> 여러 교사·학생이 동시에 웹사이트에 접속하여 대용량 PDF나 HWP를 변환해도, 문서 파싱과 PDF 합성이 각 접속자의 기기(브라우저 메모리)에서 독립적으로 처리되어 파일 섞임이나 서버 다운이 발생하지 않습니다.<br>
-                    • <strong>스마트 AI 대기열(Queue) 및 캐싱:</strong> 동시 요청 시 자동으로 트래픽을 분산(Throttling & Jitter Backoff)하며, 중복 문장은 즉시 캐시에서 불러와 속도 저하와 할당량 초과를 방지합니다.
+                    <div class="font-extrabold text-emerald-900 mb-1">✅ 무서버(Serverless) 클라이언트 분산 가동 중</div>
+                    여러 교사가 동시에 접속해도 브라우저 메모리에서 독립 처리되어 파일 섞임이 발생하지 않습니다.
                 </div>
-
-                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="font-extrabold text-slate-800">📊 현재 브라우저 세션 상태</span>
-                        <button type="button" id="clear-cache-btn" class="text-xs font-bold text-blue-600 hover:underline">캐시 비우기</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="bg-white p-2.5 rounded-xl border border-slate-200">
-                            <div class="text-slate-400 font-semibold">세션 고유 ID</div>
-                            <div id="session-id-display" class="font-mono font-bold text-slate-800 truncate mt-0.5">-</div>
-                        </div>
-                        <div class="bg-white p-2.5 rounded-xl border border-slate-200">
-                            <div class="text-slate-400 font-semibold">번역 메모리 캐시</div>
-                            <div id="cache-count-display" class="font-mono font-bold text-blue-600 mt-0.5">0건 저장됨</div>
-                        </div>
+                <div class="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 space-y-2">
+                    <div class="font-extrabold text-indigo-900">🚀 배포용 index.html 파일 추출</div>
+                    <div class="flex gap-2 pt-1">
+                        <button type="button" id="download-github-index-btn" class="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm">📥 패치된 index.html 다운로드</button>
+                        <button type="button" id="copy-github-code-btn" class="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-indigo-700 border border-indigo-300 font-bold text-xs">📋 전체 코드 복사</button>
                     </div>
                 </div>
-
                 <div class="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
-                    <div class="font-extrabold text-blue-900">🔑 외부 웹사이트 자체 배포 시 전용 API 키 설정 (선택사항)</div>
-                    <p class="text-xs text-slate-600">현재 환경에서는 키 입력 없이 즉시 작동합니다. 만약 이 HTML 파일을 학교 홈페이지나 외부 웹호스팅(Netlify, GitHub Pages 등)에 올려 대규모 인원이 동시에 사용할 경우, 기관/개인 Gemini API 키를 입력하면 독립 쿼터로 더욱 빠르게 동작합니다.</p>
-                    <input type="password" id="custom-api-key-input" placeholder="기본 내장 AI 엔진 사용 중 (외부 호스팅 시에만 AIza... 입력)" class="w-full rounded-xl border border-blue-300 px-3 py-2 text-xs font-mono bg-white focus:outline-none focus:border-blue-600">
+                    <div class="font-extrabold text-blue-900">🔑 Gemini API 키 영구 저장 (선택)</div>
+                    <input type="password" id="custom-api-key-input" placeholder="AIza..." class="w-full rounded-xl border border-blue-300 px-3 py-2 text-xs font-mono bg-white focus:outline-none focus:border-blue-600">
                 </div>
             </div>
 
@@ -715,7 +713,7 @@
         </div>
     </div>
 
-    <!-- 사용 가이드 & 홈 화면 추가 안내 모달 -->
+    <!-- 가이드 모달 -->
     <div id="guide-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[88vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -724,21 +722,12 @@
             </div>
             <div class="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
                 <div class="p-3.5 rounded-2xl bg-blue-50 border border-blue-100">
-                    <div class="font-extrabold text-blue-900 mb-1">1. 📄 PDF · 한글(HWP/HWPX) · 사진 자막 병기 (결과물: PDF)</div>
-                    교과서·학습지 <strong>PDF 파일</strong>은 물론, 학교에서 작성한 <strong>한글 문서(.hwp, .hwpx)</strong>나 <strong>스마트폰 사진</strong>을 올리면 한글 문장 바로 아래에 다국어 자막을 병기하여 <strong>인쇄용 PDF로 통합 발행</strong>해 줍니다.
+                    <div class="font-extrabold text-blue-900 mb-1">1. 📄 PDF·HWP 자막 병기</div>
+                    교과서 PDF 및 아래아한글 학습지 원본 디자인 위에 다국어 자막을 병기합니다.
                 </div>
                 <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-100">
-                    <div class="font-extrabold text-amber-900 mb-1">2. ✨ PPT 요약 학습지 (2~3쪽 A4)</div>
-                    수업용 PPTX 파일을 올리면 초등학생 눈높이에 맞춘 <strong>핵심 문장 8개 + 필수 어휘 + 확인 문제</strong>가 담긴 A4 학습지로 자동 제작됩니다.
-                </div>
-                <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100">
-                    <div class="font-extrabold text-emerald-900 mb-1">3. ✍️ 파일 없이 알림장·지문 즉시 변환</div>
-                    학부모 알림장이나 읽기 지문을 복사해 붙여넣기만 하면 깔끔한 이중언어 유인물과 카카오톡 공유용 이미지로 만들어 줍니다.
-                </div>
-                <div class="p-3.5 rounded-2xl bg-slate-100 border border-slate-200">
-                    <div class="font-extrabold text-slate-800 mb-1">📲 스마트폰 홈 화면에 앱처럼 추가하기</div>
-                    • <strong>아이폰(Safari):</strong> 하단 공유 버튼[↑] 탭 → <em>'홈 화면에 추가'</em><br>
-                    • <strong>안드로이드(Chrome):</strong> 우측 상단 메뉴[⋮] 탭 → <em>'홈 화면에 추가 / 앱 설치'</em>
+                    <div class="font-extrabold text-amber-900 mb-1">2. ✨ PPT 요약 학습지</div>
+                    수업용 PPT를 초등학생 눈높이에 맞춘 핵심 요약 학습지로 자동 변환합니다.
                 </div>
             </div>
             <button id="confirm-guide-btn" type="button" class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm">확인했습니다</button>
@@ -746,62 +735,81 @@
     </div>
 
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
         let rawPdfLibBuffer = null;
         let pdfPagesModel = [];
-        let pdfSubtitleStyle = {
-            scale: 1.0,
-            color: '#1d4ed8',
-            bgMode: 'halo'
-        };
-
+        let pdfSubtitleStyle = { scale: 1.0, color: '#1d4ed8', bgMode: 'halo' };
         let pptWorksheetData = null;
         let currentWorksheetStyle = 'classic';
         let originalFileName = "다문화_학습지";
-        let currentMode = 'pdf'; // 'pdf' | 'ppt' | 'text'
-        let currentZoomMode = 'fit'; // 'fit' | number (0.5 ~ 1.5)
+        let currentMode = 'pdf';
+        let currentZoomMode = 'fit';
 
-        // ============================================================================
-        // [다중 접속(Multi-User) 안정화 엔진] 세션 격리 · 번역 캐시 · 스마트 요청 대기열
-        // ============================================================================
         const clientSessionId = 'SES-' + Math.random().toString(36).substring(2, 8).toUpperCase();
         const translationMemoryCache = new Map();
         const activeObjectUrls = new Set();
+        const EMBEDDED_OBF_KEY = "";
         let userCustomApiKey = "";
+        let geminiKeylessBlocked = false;
         let activeApiRequests = 0;
         const MAX_CONCURRENT_REQUESTS = 2;
         const apiRequestQueue = [];
 
-        // 다국어 신경망 번역 언어 코드 매핑 (외부 웹사이트 무설치 폴백 및 전 세계 언어 지원)
+        function encodeObfuscatedKey(plainKey) {
+            if (!plainKey) return "";
+            const salt = "BILINGUAL_EDU_2026";
+            const bytes = [];
+            for (let i = 0; i < plainKey.length; i++) {
+                bytes.push(plainKey.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
+            }
+            return btoa(String.fromCharCode(...bytes));
+        }
+
+        function decodeObfuscatedKey(encoded) {
+            if (!encoded) return "";
+            try {
+                const salt = "BILINGUAL_EDU_2026";
+                const raw = atob(encoded);
+                let out = "";
+                for (let i = 0; i < raw.length; i++) {
+                    out += String.fromCharCode(raw.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
+                }
+                return out;
+            } catch (e) { return ""; }
+        }
+
+        function initSavedApiKey() {
+            try {
+                const saved = localStorage.getItem('bilingual_studio_api_key') || "";
+                const embedded = decodeObfuscatedKey(EMBEDDED_OBF_KEY);
+                userCustomApiKey = (saved || embedded || "").trim();
+                const inputEl = document.getElementById('custom-api-key-input');
+                if (inputEl && userCustomApiKey) inputEl.value = userCustomApiKey;
+            } catch (e) {}
+        }
+        initSavedApiKey();
+
+        function shouldBypassKeylessGemini() {
+            const cleanKey = (userCustomApiKey || "").trim();
+            if (cleanKey.length > 8) return false;
+            const host = (window.location.hostname || "").toLowerCase();
+            if (host.endsWith("github.io")) return true;
+            if (geminiKeylessBlocked) return true;
+            return false;
+        }
+
         const LANG_CODE_MAP = {
-            '러시아어': 'ru',
-            '베트남어': 'vi',
-            '중국어': 'zh-CN',
-            '영어': 'en',
-            '네팔어': 'ne',
-            '몽골어': 'mn',
-            '우즈베크어': 'uz',
-            '일본어': 'ja',
-            '필리핀어(타갈로그어)': 'tl',
-            '필리핀어': 'tl',
-            '태국어': 'th',
-            '카자흐어': 'kk',
-            '스페인어': 'es',
-            '아랍어': 'ar',
-            '인도네시아어': 'id',
-            '크메르어': 'km',
-            '캄보디아어': 'km',
-            '미얀마어': 'my',
-            '프랑스어': 'fr',
-            '독일어': 'de',
-            '포르투갈어': 'pt',
-            '힌디어': 'hi',
-            '우르두어': 'ur',
-            '싱할라어': 'si',
-            '벵골어': 'bn',
-            '튀르키예어': 'tr',
-            '터키어': 'tr'
+            '러시아어': 'ru', '베트남어': 'vi', '중국어': 'zh-CN', '영어': 'en',
+            '네팔어': 'ne', '몽골어': 'mn', '우즈베크어': 'uz', '일본어': 'ja',
+            '필리핀어(타갈로그어)': 'tl', '필리핀어': 'tl', '태국어': 'th', '카자흐어': 'kk',
+            '스페인어': 'es', '아랍어': 'ar', '인도네시아어': 'id', '크메르어': 'km', '미얀마어': 'my'
+        };
+
+        // 교과서 핵심 용어 다국어 보정 사전 (오번역 방지)
+        const EDU_GLOSSARY_HINTS = {
+            '러시아어': '합동=конгруэнтность (равенство фигур), 선대칭도형=фигура с осевой симметрией, 점대칭도형=фигура с центральной симметрией, 대칭축=ось симметрии, 대칭의 중심=центр симметрии, 대응점=соответствующая точка, 대응변=соответствующая сторона, 대응각=соответствующий угол, 표준어=литературный язык (пхёджуно), 방언=диалект (панъон)',
+            '베트남어': '합동=두 도형이 완전히 겹침(hình bằng nhau), 선대칭도형=hình đối xứng trục, 점대칭도형=hình đối xứng tâm, 대칭축=trục đối xứng, 대응점=điểm tương ứng, 대응변=cạnh tương ứng, 대응각=góc tương ứng, 표준어=ngôn ngữ chuẩn, 방언=phương ngữ',
+            '중국어': '합동=全等, 선대칭도형=轴对称图形, 점대칭도형=中心对称图形, 대칭축=对称轴, 대칭의 중심=对称中心, 대응점=对应点, 대응변=对应边, 대응각=对应角, 표준어=标准语, 방언=方言',
+            '영어': '합동=congruence (congruent figures), 선대칭도형=line-symmetric figure, 점대칭도형=point-symmetric figure, 대칭축=axis of symmetry, 대칭의 중심=center of symmetry, 대응점=corresponding point, 대응변=corresponding side, 대응각=corresponding angle, 표준어=standard language, 방언=regional dialect'
         };
 
         function resolveTargetLangCode(targetLang) {
@@ -810,7 +818,6 @@
             for (const [k, code] of Object.entries(LANG_CODE_MAP)) {
                 if (clean.includes(k) || k.includes(clean)) return code;
             }
-            if (/^[a-z]{2}(-[A-Z]{2})?$/.test(clean)) return clean;
             return 'en';
         }
 
@@ -839,21 +846,11 @@
             while (activeApiRequests < MAX_CONCURRENT_REQUESTS && apiRequestQueue.length > 0) {
                 const { taskFn, resolve, reject } = apiRequestQueue.shift();
                 activeApiRequests++;
-                taskFn()
-                    .then(resolve)
-                    .catch(reject)
-                    .finally(() => {
-                        activeApiRequests--;
-                        processApiQueue();
-                    });
+                taskFn().then(resolve).catch(reject).finally(() => {
+                    activeApiRequests--;
+                    processApiQueue();
+                });
             }
-        }
-
-        function updateConcurrencyModalInfo() {
-            const sesEl = document.getElementById('session-id-display');
-            const cacheEl = document.getElementById('cache-count-display');
-            if (sesEl) sesEl.textContent = clientSessionId;
-            if (cacheEl) cacheEl.textContent = `${translationMemoryCache.size}건 저장됨`;
         }
 
         function showToast(message, type = 'info') {
@@ -891,8 +888,7 @@
             const checked = document.querySelector('input[name="lang"]:checked');
             if (!checked) return '러시아어';
             if (checked.value === 'custom') {
-                const customVal = document.getElementById('custom-lang-input').value.trim();
-                return customVal || '영어';
+                return document.getElementById('custom-lang-input').value.trim() || '영어';
             }
             return checked.value;
         }
@@ -910,7 +906,6 @@
         });
 
         function switchTab(mode) {
-            // 작업 완료 화면이 열려있다면 초기화 후 탭 전환
             if (!document.getElementById('success-section').classList.contains('hidden')) {
                 resetWorkspaceToHome();
             }
@@ -969,211 +964,214 @@
         document.getElementById('confirm-guide-btn').addEventListener('click', () => guideModal.classList.add('hidden'));
 
         const concurrencyModal = document.getElementById('concurrency-modal');
-        document.getElementById('concurrency-modal-btn').addEventListener('click', () => {
-            updateConcurrencyModalInfo();
-            concurrencyModal.classList.remove('hidden');
-        });
+        document.getElementById('concurrency-modal-btn').addEventListener('click', () => concurrencyModal.classList.remove('hidden'));
         document.getElementById('close-concurrency-btn').addEventListener('click', () => concurrencyModal.classList.add('hidden'));
         document.getElementById('confirm-concurrency-btn').addEventListener('click', () => {
             userCustomApiKey = document.getElementById('custom-api-key-input').value.trim();
+            geminiKeylessBlocked = false;
+            try {
+                if (userCustomApiKey) localStorage.setItem('bilingual_studio_api_key', userCustomApiKey);
+                else localStorage.removeItem('bilingual_studio_api_key');
+            } catch (e) {}
             concurrencyModal.classList.add('hidden');
-            showToast('다중 접속 및 엔진 설정이 반영되었습니다.', 'success');
-        });
-        document.getElementById('clear-cache-btn').addEventListener('click', () => {
-            translationMemoryCache.clear();
-            updateConcurrencyModalInfo();
-            showToast('번역 메모리 캐시가 초기화되었습니다.', 'info');
+            showToast('설정이 저장되었습니다.', 'success');
         });
 
-        document.getElementById('btn-select-pdf').addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.getElementById('pdf-input').click();
-        });
-        document.getElementById('btn-camera-capture').addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.getElementById('camera-input').click();
-        });
-        document.getElementById('pdf-input').addEventListener('click', (e) => e.stopPropagation());
-        document.getElementById('camera-input').addEventListener('click', (e) => e.stopPropagation());
-        document.getElementById('ppt-input').addEventListener('click', (e) => e.stopPropagation());
-
-        document.getElementById('pdf-upload-box').addEventListener('click', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
-            document.getElementById('pdf-input').click();
-        });
-        document.getElementById('ppt-upload-box').addEventListener('click', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
-            document.getElementById('ppt-input').click();
-        });
-
-        // 데스크톱 드래그 앤 드롭 지원
-        function setupDropzone(boxId, onFileCallback) {
-            const box = document.getElementById(boxId);
-            ['dragenter', 'dragover'].forEach(evt => {
-                box.addEventListener(evt, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    box.classList.add('dropzone-active');
-                });
-            });
-            ['dragleave', 'drop'].forEach(evt => {
-                box.addEventListener(evt, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    box.classList.remove('dropzone-active');
-                });
-            });
-            box.addEventListener('drop', (e) => {
-                const files = e.dataTransfer?.files;
-                if (files && files.length > 0) onFileCallback(files[0]);
-            });
+        // 배포용 index.html 다운로드 및 복사 기능
+        function buildDeployableHtmlString() {
+            const currentKey = document.getElementById('custom-api-key-input').value.trim() || userCustomApiKey;
+            const obf = encodeObfuscatedKey(currentKey);
+            let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+            html = html.replace(/const EMBEDDED_OBF_KEY = "[^"]*";/, `const EMBEDDED_OBF_KEY = "${obf}";`);
+            return html;
         }
 
-        setupDropzone('pdf-upload-box', (file) => handlePdfOrImageFile(file));
-        setupDropzone('ppt-upload-box', (file) => handlePptFile(file));
-
-        function applyResponsivePreviewScale() {
-            // 1. PDF 스튜디오 스케일링
-            const pdfContainer = document.getElementById('pdf-studio-pages-container');
-            if (pdfContainer && !document.getElementById('pdf-studio-wrapper').classList.contains('hidden')) {
-                const availW = Math.max(280, pdfContainer.clientWidth - 8);
-                let appliedScale = 1;
-                pdfContainer.querySelectorAll('.pdf-studio-page').forEach((pageEl, idx) => {
-                    const pageData = pdfPagesModel[idx];
-                    if (!pageData) return;
-                    const scale = currentZoomMode === 'fit'
-                        ? Math.min(1.0, availW / pageData.displayWidth)
-                        : currentZoomMode;
-                    appliedScale = scale;
-                    pageEl.style.transform = `scale(${scale})`;
-                    pageEl.style.marginBottom = `${(pageData.displayHeight * (scale - 1)) + 20}px`;
-                });
-                document.getElementById('zoom-level-text').textContent = `${Math.round(appliedScale * 100)}%`;
+        document.getElementById('download-github-index-btn').addEventListener('click', () => {
+            try {
+                const htmlStr = buildDeployableHtmlString();
+                const blob = new Blob([htmlStr], { type: 'text/html;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = registerObjectUrl(URL.createObjectURL(blob));
+                link.download = 'index.html';
+                link.click();
+                showToast('패치된 index.html 파일이 다운로드되었습니다!', 'success');
+            } catch (e) {
+                showToast('파일 생성 중 오류가 발생했습니다.', 'error');
             }
+        });
 
-            // 2. A4 학습지 미리보기 스케일링
-            const wsContainer = document.getElementById('worksheet-pages-container');
-            if (wsContainer && !document.getElementById('worksheet-preview-wrapper').classList.contains('hidden')) {
-                const availW = Math.max(280, wsContainer.clientWidth - 8);
-                const baseA4Width = 794;
-                const scale = currentZoomMode === 'fit'
-                    ? Math.min(1.0, availW / baseA4Width)
-                    : currentZoomMode;
-
-                wsContainer.querySelectorAll('.a4-scale-slot').forEach(slot => {
-                    const sheet = slot.querySelector('.a4-sheet');
-                    if (!sheet) return;
-                    sheet.style.transform = `scale(${scale})`;
-                    const actualH = sheet.offsetHeight || 1123;
-                    slot.style.height = `${Math.ceil(actualH * scale) + 8}px`;
-                });
-                document.getElementById('zoom-level-text').textContent = `${Math.round(scale * 100)}%`;
+        document.getElementById('copy-github-code-btn').addEventListener('click', () => {
+            try {
+                const htmlStr = buildDeployableHtmlString();
+                const tempArea = document.createElement('textarea');
+                tempArea.value = htmlStr;
+                document.body.appendChild(tempArea);
+                tempArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempArea);
+                showToast('전체 HTML 코드가 클립보드에 복사되었습니다!', 'success');
+            } catch (e) {
+                showToast('코드 복사 중 오류가 발생했습니다.', 'error');
             }
-        }
-
-        window.addEventListener('resize', applyResponsivePreviewScale);
-
-        document.getElementById('zoom-fit-btn').addEventListener('click', () => {
-            currentZoomMode = 'fit';
-            applyResponsivePreviewScale();
-        });
-        document.getElementById('zoom-out-btn').addEventListener('click', () => {
-            const cur = currentZoomMode === 'fit' ? 0.8 : currentZoomMode;
-            currentZoomMode = Math.max(0.4, Math.round((cur - 0.1) * 10) / 10);
-            applyResponsivePreviewScale();
-        });
-        document.getElementById('zoom-in-btn').addEventListener('click', () => {
-            const cur = currentZoomMode === 'fit' ? 0.8 : currentZoomMode;
-            currentZoomMode = Math.min(1.4, Math.round((cur + 0.1) * 10) / 10);
-            applyResponsivePreviewScale();
         });
 
         function cleanJSONString(str) {
-            let cleaned = str.trim();
-            if (cleaned.startsWith("```json")) {
-                cleaned = cleaned.replace(/^```json/, "").replace(/```$/, "");
-            } else if (cleaned.startsWith("```")) {
-                cleaned = cleaned.replace(/^```/, "").replace(/```$/, "");
+            if (!str) return "";
+            let cleaned = String(str).trim();
+            cleaned = cleaned.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+            const firstArr = cleaned.indexOf('[');
+            const firstObj = cleaned.indexOf('{');
+            if (firstArr !== -1 && (firstObj === -1 || firstArr < firstObj)) {
+                const lastArr = cleaned.lastIndexOf(']');
+                if (lastArr > firstArr) return cleaned.slice(firstArr, lastArr + 1);
+            } else if (firstObj !== -1) {
+                const lastObj = cleaned.lastIndexOf('}');
+                if (lastObj > firstObj) return cleaned.slice(firstObj, lastObj + 1);
             }
-            return cleaned.trim();
+            return cleaned;
         }
 
-        function getDocTypeInstruction(docType, targetLang) {
-            if (docType === 'exam') {
-                return `이 문서는 학생들의 학업 성취도를 평가하는 '시험지/평가지'입니다. 문제의 지시문(발문), 조건, 보기를 ${targetLang}로 정확히 번역하되, 문제의 정답이나 힌트를 절대 추가로 적어주지 마세요. 수식이나 기호(ㄱ, ㄴ, ㄷ, 가, 나, 다)는 원문 기호를 병기해 학생이 혼동하지 않게 하세요.`;
-            } else if (docType === 'notice') {
-                return `이 문서는 학교에서 다문화 가정 학부모님과 학생에게 보내는 '가정통신문/안내장'입니다. 날짜, 준비물, 신청 방법, 안내 사항이 정확히 전달되도록 정중하고 명확한 ${targetLang}로 번역하세요.`;
-            } else if (docType === 'reading') {
-                return `이 문서는 국어·사회·과학 등의 '교과서 읽기 지문 및 학습지'입니다. 문맥과 어휘의 의미를 살려 학생이 쉽게 독해할 수 있도록 자연스러운 ${targetLang}로 번역하세요.`;
-            }
-            return `이 문서는 초·중등 교육용 '교과서 및 학습지'입니다. 다문화 학생이 개념과 활동 지시문을 쉽게 이해할 수 있도록 직관적이고 간결한 ${targetLang}로 번역하세요. 번역문은 가급적 간결하게 작성하여 자막 길이가 너무 길어지지 않도록 하세요.`;
-        }
-
-        // 외부 웹사이트 배포 시 API 키 없이도 즉시 작동하는 신경망 번역 엔진
-        async function translateSingleTextFallback(text, targetLangCode) {
-            if (!text || !text.trim()) return "";
+        async function callKeylessCloudLLM(prompt, returnType = "array") {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
             try {
-                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl=${encodeURIComponent(targetLangCode)}&dt=t&q=${encodeURIComponent(text.trim())}`;
+                const response = await fetch('https://text.pollinations.ai/openai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        model: 'openai',
+                        temperature: 0.2,
+                        response_format: returnType === 'object' ? { type: 'json_object' } : undefined,
+                        messages: [
+                            { role: 'system', content: 'You are an expert Korean-multilingual elementary education AI. Always respond ONLY with valid JSON matching the exact schema requested.' },
+                            { role: 'user', content: prompt }
+                        ]
+                    })
+                });
+                clearTimeout(timer);
+                if (!response.ok) return null;
+                const data = await response.json();
+                const content = data?.choices?.[0]?.message?.content;
+                if (content) return JSON.parse(cleanJSONString(content));
+            } catch (e) {
+                clearTimeout(timer);
+            }
+            return null;
+        }
+
+        async function callGeminiAPI(prompt, returnType = "array") {
+            if (shouldBypassKeylessGemini()) {
+                return await callKeylessCloudLLM(prompt, returnType);
+            }
+
+            return runWithConcurrencyLimit(async () => {
+                const apiKey = (userCustomApiKey || "").trim();
+                const modelsToTry = apiKey
+                    ? ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.0-flash']
+                    : ['gemini-3-flash-preview'];
+
+                for (const modelName of modelsToTry) {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature: 0.2,
+                            responseMimeType: "application/json"
+                        }
+                    };
+
+                    const delays = [900, 1800];
+                    for (let attempt = 0; attempt <= delays.length; attempt++) {
+                        try {
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            const result = await response.json();
+                            if (result.error) {
+                                const code = result.error.code || response.status;
+                                if (code === 429 && attempt < delays.length) {
+                                    await new Promise(r => setTimeout(r, delays[attempt]));
+                                    continue;
+                                }
+                                if (!apiKey && (code === 400 || code === 401 || code === 403)) {
+                                    geminiKeylessBlocked = true;
+                                }
+                                break;
+                            }
+                            const textOut = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (textOut) {
+                                return JSON.parse(cleanJSONString(textOut));
+                            }
+                        } catch (e) {
+                            if (attempt < delays.length) {
+                                await new Promise(r => setTimeout(r, delays[attempt]));
+                                continue;
+                            }
+                        }
+                    }
+                    if (geminiKeylessBlocked) break;
+                }
+                return await callKeylessCloudLLM(prompt, returnType);
+            });
+        }
+
+        // 한글 기호(가, 나, ㄱ, ㄴ 등) 및 수학 용어 후처리 보정
+        function refineEducationalTranslation(koText, transText, targetLang) {
+            if (!transText) return "";
+            let out = String(transText).trim();
+            if (targetLang === '러시아어') {
+                out = out.replace(/фигур[аыуе]\s+«?А»?/gi, 'фигуре «Га(가)»');
+                if (/합동/.test(koText) && /союз|совместн/i.test(out)) {
+                    out = out.replace(/союз[а-я]*/gi, 'конгруэнтность (равенство фигур)');
+                }
+                if (/선대칭도형/.test(koText) && !/осев|симметр/i.test(out)) {
+                    out += ' (фигура с осевой симметрией)';
+                }
+                if (/점대칭도형/.test(koText) && !/центральн|симметр/i.test(out)) {
+                    out += ' (фигура с центральной симметрией)';
+                }
+            }
+            return out;
+        }
+
+        async function translateSingleTextFallback(text, targetLangCode, targetLangName = "") {
+            if (!text || !text.trim()) return "";
+            // 기호 보호 전처리: '도형 가' 등이 오번역되지 않도록 보호
+            const preProcessed = text
+                .replace(/도형\s*([가나다라마바사아자차])/g, '도형 "$1"')
+                .replace(/점\s*([ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊ])/g, '점 $1')
+                .replace(/변\s*([ㄱ-ㅎ]{2})/g, '변 $1')
+                .replace(/각\s*([ㄱ-ㅎ]{3})/g, '각 $1');
+
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl=${encodeURIComponent(targetLangCode)}&dt=t&q=${encodeURIComponent(preProcessed)}`;
                 const res = await fetch(url);
-                if (!res.ok) throw new Error("GTX HTTP " + res.status);
+                if (!res.ok) throw new Error();
                 const data = await res.json();
                 if (Array.isArray(data) && Array.isArray(data[0])) {
-                    return data[0].map(part => part[0] || "").join("").trim();
+                    const rawTrans = data[0].map(part => part[0] || "").join("").trim();
+                    return refineEducationalTranslation(text, rawTrans, targetLangName);
                 }
-            } catch (e) {
-                try {
-                    const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.trim().slice(0, 450))}&langpair=ko|${encodeURIComponent(targetLangCode)}`;
-                    const mmRes = await fetch(mmUrl);
-                    const mmData = await mmRes.json();
-                    if (mmData?.responseData?.translatedText) {
-                        return mmData.responseData.translatedText.trim();
-                    }
-                } catch (e2) {}
-            }
-            return "";
+            } catch (e) {}
+            return text;
         }
 
         async function translateBatchWithNeuralFallback(texts, targetLang) {
             const tlCode = resolveTargetLangCode(targetLang);
-            const delimiter = " ||| ";
             const results = new Array(texts.length).fill("");
-
-            // 문장들을 적정 길이 묶음으로 나누어 고속 번역
-            let chunkIndices = [];
-            let chunkTexts = [];
-            let currentLen = 0;
-
-            async function flushChunk() {
-                if (chunkTexts.length === 0) return;
-                const joined = chunkTexts.join("\n");
-                const translatedJoined = await translateSingleTextFallback(joined, tlCode);
-                const splitLines = translatedJoined.split(/\r?\n/);
-
-                if (splitLines.length === chunkTexts.length) {
-                    chunkIndices.forEach((origIdx, i) => {
-                        results[origIdx] = (splitLines[i] || "").trim();
-                    });
-                } else {
-                    for (let i = 0; i < chunkTexts.length; i++) {
-                        results[chunkIndices[i]] = await translateSingleTextFallback(chunkTexts[i], tlCode);
-                    }
-                }
-                chunkIndices = [];
-                chunkTexts = [];
-                currentLen = 0;
+            const chunkSize = 6;
+            for (let start = 0; start < texts.length; start += chunkSize) {
+                const slice = texts.slice(start, start + chunkSize);
+                const translatedSlice = await Promise.all(
+                    slice.map(t => translateSingleTextFallback(t, tlCode, targetLang))
+                );
+                translatedSlice.forEach((val, idx) => {
+                    results[start + idx] = val;
+                });
             }
-
-            for (let i = 0; i < texts.length; i++) {
-                const cleanLine = (texts[i] || "").replace(/\r?\n/g, " ").trim();
-                if (!cleanLine) continue;
-                if (currentLen + cleanLine.length > 900 || chunkTexts.length >= 10) {
-                    await flushChunk();
-                }
-                chunkIndices.push(i);
-                chunkTexts.push(cleanLine);
-                currentLen += cleanLine.length;
-            }
-            await flushChunk();
             return results;
         }
 
@@ -1195,48 +1193,51 @@
 
             if (uncachedTexts.length === 0) return results;
 
-            const contextGuide = getDocTypeInstruction(docType, targetLang);
-            const prompt = `당신은 다문화 학생들을 위한 교육 전문 번역가입니다.
-${contextGuide}
+            const glossaryHint = EDU_GLOSSARY_HINTS[targetLang] || '';
+            const toneGuide = docType === 'exam'
+                ? 'This is a school test/exam. Translate question instructions accurately WITHOUT giving away any hints or answers.'
+                : docType === 'notice'
+                ? 'This is a school notice for parents. Use polite, clear, and respectful expressions.'
+                : 'This is an elementary/middle school textbook or worksheet. Use clear, student-friendly, and accurate academic terminology.';
 
-[중요 규칙]
-1. 입력된 한국어 문자열 배열(길이: ${uncachedTexts.length})을 순서대로 ${targetLang}로 번역하세요.
-2. 반환값은 반드시 입력 배열과 길이가 정확히 동일한(${uncachedTexts.length}개) JSON 문자열 배열(Array of strings)이어야 합니다.
-3. 한국어 원문에 있는 번호(1, 2, ①, •)는 중복해서 넣지 말고 순수 번역 내용만 간결하게 작성하세요.
-4. 번역이 불필요한 단순 기호나 숫자인 경우 빈 문자열("")을 넣으세요.
-
-원본 배열:
+            const prompt = `You are a professional bilingual textbook translator.
+Translate the following JSON array of Korean educational sentences into ${targetLang}.
+${toneGuide}
+${glossaryHint ? `Terminology guide: ${glossaryHint}` : ''}
+Keep Korean shape/point labels like 가, 나, 다, ㄱ, ㄴ, ㄷ, ㄹ intact (e.g., "Га(가)", "ㄱㄴㄷ").
+Return ONLY a valid JSON array of strings with the exact same length (${uncachedTexts.length}).
+Input:
 ${JSON.stringify(uncachedTexts)}`;
 
-            let res = null;
-            try {
-                res = await callGeminiAPI(prompt, "array");
-            } catch (err) {
-                log(`[자체 다국어 신경망 전환] 외부 웹사이트 무설치 번역 엔진으로 번역을 계속합니다.`);
-                res = await translateBatchWithNeuralFallback(uncachedTexts, targetLang);
-            }
-
-            if (!Array.isArray(res) || res.length === 0) {
+            let res = await callGeminiAPI(prompt, "array");
+            if (!Array.isArray(res) || res.length !== uncachedTexts.length) {
                 res = await translateBatchWithNeuralFallback(uncachedTexts, targetLang);
             }
 
             if (Array.isArray(res)) {
                 uncachedIndices.forEach((origIdx, i) => {
-                    const transVal = (res[i] || "").trim();
+                    const transVal = refineEducationalTranslation(texts[origIdx], (res[i] || "").trim(), targetLang);
                     results[origIdx] = transVal;
-                    if (transVal) {
-                        const key = `${targetLang}|${docType}|${texts[origIdx].trim()}`;
-                        translationMemoryCache.set(key, transVal);
-                    }
+                    if (transVal) translationMemoryCache.set(`${targetLang}|${docType}|${texts[origIdx].trim()}`, transVal);
                 });
             }
             return results;
         }
 
-        // ============================================================================
-        // [PDF 레이아웃 분석기 · 이미지/스캔본 변환기 · 터치/마우스 자막 스튜디오]
-        // ============================================================================
-        function analyzePdfPageLayout(textContent, viewport, syncMode = 'line') {
+        // 의미 없는 단일 기호·쪽번호 필터링
+        function isMeaningfulKoreanBlock(str) {
+            const clean = (str || "").trim();
+            if (clean.length < 2) return false;
+            // 쪽 번호, 치수(4 cm, 100°), 단독 기호(가, 나, ㄱ, ㄴ 등) 제외
+            if (/^[\d\s.,°%+\-×÷=():;~<>[\]/]+$/.test(clean)) return false;
+            if (/^\d+\s*(cm|mm|m|km|g|kg|L|mL|°|개|명|번|쪽)$/i.test(clean)) return false;
+            if (/^[가나다라마바사아자차카타파하ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ\s.,()]+$/.test(clean) && clean.length <= 4) return false;
+            if (/^(http|www\.)/i.test(clean)) return false;
+            return /[가-힣]/.test(clean);
+        }
+
+        // 고정밀 PDF 페이지 레이아웃 분석 및 스마트 문장·문단 병기 엔진
+        function analyzePdfPageLayout(textContent, viewport, syncMode = 'smart') {
             if (!textContent || !Array.isArray(textContent.items)) return [];
             const pageW = viewport.width;
             const pageH = viewport.height;
@@ -1245,63 +1246,41 @@ ${JSON.stringify(uncachedTexts)}`;
             for (const item of textContent.items) {
                 const str = (item.str || "").replace(/\s+/g, " ").trim();
                 if (!str) continue;
-
                 const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-                const fontH = Math.max(8, Math.hypot(tx[2], tx[3]) || Math.abs(item.height) || 12);
+                const fontH = Math.max(8, Math.hypot(tx[2], tx[3]) || 12);
                 const x = tx[4];
                 const yBottom = tx[5];
                 const yTop = yBottom - fontH;
-                const w = Math.max(fontH * 0.5, (item.width || str.length * fontH * 0.55) * viewport.scale);
-
-                if (x < 0 || x > pageW || yBottom < 0 || yTop > pageH) continue;
-                rawItems.push({
-                    str,
-                    x,
-                    yTop,
-                    yBottom,
-                    w,
-                    fontH
-                });
+                const w = Math.max(fontH * 0.5, (item.width ? item.width * viewport.scale : str.length * fontH * 0.55));
+                // 상하단 페이지 번호 및 여백 노이즈 제외
+                if (x < 10 || x > pageW - 10 || yBottom < pageH * 0.035 || yTop > pageH * 0.945) continue;
+                rawItems.push({ str, x, yTop, yBottom, w, fontH });
             }
 
             if (rawItems.length === 0) return [];
+            rawItems.sort((a, b) => Math.abs(a.yTop - b.yTop) > 5 ? a.yTop - b.yTop : a.x - b.x);
 
-            // 위에서 아래로, 왼쪽에서 오른쪽으로 정렬
-            rawItems.sort((a, b) => {
-                if (Math.abs(a.yTop - b.yTop) > Math.min(a.fontH, b.fontH) * 0.55) {
-                    return a.yTop - b.yTop;
-                }
-                return a.x - b.x;
-            });
-
-            // 같은 줄(Line) 세그먼트 병합 (다단 및 표 셀 간격 분리)
+            // 1단계: 같은 줄(행)의 텍스트 조각 병합 (다단/표 셀은 가로 간격으로 분리)
             const lines = [];
             for (const item of rawItems) {
-                let matchedLine = null;
+                let matched = null;
                 for (let i = lines.length - 1; i >= 0; i--) {
-                    const candidate = lines[i];
-                    const vDiff = Math.abs(item.yTop - candidate.yTop);
-                    if (vDiff > Math.max(item.fontH, candidate.fontH) * 0.65) {
-                        if (item.yTop - candidate.yTop > 30) break;
-                        continue;
-                    }
-                    const hGap = item.x - (candidate.x + candidate.w);
-                    const maxAllowedGap = Math.max(item.fontH, candidate.fontH) * 3.2;
-                    if (hGap >= -item.fontH && hGap <= maxAllowedGap) {
-                        matchedLine = candidate;
-                        break;
+                    const ln = lines[i];
+                    if (Math.abs(ln.yTop - item.yTop) <= Math.max(5.5, ln.fontH * 0.42)) {
+                        const gapX = item.x - (ln.x + ln.w);
+                        if (gapX >= -12 && gapX <= Math.max(36, ln.fontH * 2.6)) {
+                            matched = ln;
+                            break;
+                        }
                     }
                 }
-
-                if (matchedLine) {
-                    const gap = item.x - (matchedLine.x + matchedLine.w);
-                    matchedLine.text += (gap > matchedLine.fontH * 0.22 ? " " : "") + item.str;
-                    const rightEdge = Math.max(matchedLine.x + matchedLine.w, item.x + item.w);
-                    matchedLine.x = Math.min(matchedLine.x, item.x);
-                    matchedLine.w = rightEdge - matchedLine.x;
-                    matchedLine.yTop = Math.min(matchedLine.yTop, item.yTop);
-                    matchedLine.yBottom = Math.max(matchedLine.yBottom, item.yBottom);
-                    matchedLine.fontH = Math.max(matchedLine.fontH, item.fontH);
+                if (matched) {
+                    const gapX = item.x - (matched.x + matched.w);
+                    matched.text += (gapX > matched.fontH * 0.22 ? " " : "") + item.str;
+                    matched.w = Math.max(matched.w, (item.x + item.w) - matched.x);
+                    matched.yTop = Math.min(matched.yTop, item.yTop);
+                    matched.yBottom = Math.max(matched.yBottom, item.yBottom);
+                    matched.fontH = Math.max(matched.fontH, item.fontH);
                 } else {
                     lines.push({
                         text: item.str,
@@ -1314,756 +1293,335 @@ ${JSON.stringify(uncachedTexts)}`;
                 }
             }
 
-            // 한국어가 포함된 유의미한 학습 문장만 필터링 (단순 기호 가, 나, ㄱ, ㄴ 및 쪽수 제외)
-            const koreanLines = lines.filter(line => {
-                const t = line.text.trim();
-                if (!/[가-힣]/.test(t)) return false;
-                const onlyHangul = t.replace(/[^가-힣]/g, "");
-                if (onlyHangul.length <= 1 && t.length <= 3) return false;
-                if (/^(준비물|수학익힘)\s*\d*/.test(t) && t.length <= 12) return false;
-                return true;
-            });
+            const validLines = lines.filter(ln => isMeaningfulKoreanBlock(ln.text));
+            if (validLines.length === 0) return [];
+            validLines.sort((a, b) => Math.abs(a.yTop - b.yTop) > 6 ? a.yTop - b.yTop : a.x - b.x);
 
-            if (koreanLines.length === 0) return [];
+            // 2단계: 스마트 문장·문단 병합 (2~3줄로 이어지는 한 문장을 묶어 마지막 줄 아래에 배치)
+            const mergedGroups = [];
+            if (syncMode === 'line') {
+                validLines.forEach(ln => mergedGroups.push({
+                    text: ln.text.trim(),
+                    x: ln.x,
+                    firstYTop: ln.yTop,
+                    lastYBottom: ln.yBottom,
+                    maxW: ln.w,
+                    fontH: ln.fontH
+                }));
+            } else {
+                for (const ln of validLines) {
+                    const txt = ln.text.trim();
+                    const startsNewBullet = /^([0-9]+[.)]|①|②|③|④|⑤|•|·|-|▶|▷|★|☆|\[|\()/.test(txt);
+                    let prev = mergedGroups.length > 0 ? mergedGroups[mergedGroups.length - 1] : null;
 
+                    if (prev) {
+                        const vGap = ln.yTop - prev.lastYBottom;
+                        const xDiff = Math.abs(ln.x - prev.x);
+                        const prevEndsSentence = /([.?!]|다\.|요\.|까\?|세요\.|시오\.|보자\.|봅시다\.)$/.test(prev.text);
+                        const maxAllowedGap = syncMode === 'paragraph' ? prev.fontH * 1.45 : prev.fontH * 1.05;
+                        const canMerge =
+                            vGap >= -3 &&
+                            vGap <= maxAllowedGap &&
+                            xDiff <= Math.max(45, prev.fontH * 3.0) &&
+                            !startsNewBullet &&
+                            (syncMode === 'paragraph' || !prevEndsSentence);
+
+                        if (canMerge) {
+                            prev.text += " " + txt;
+                            prev.lastYBottom = Math.max(prev.lastYBottom, ln.yBottom);
+                            prev.x = Math.min(prev.x, ln.x);
+                            prev.maxW = Math.max(prev.maxW, (ln.x + ln.w) - prev.x);
+                            continue;
+                        }
+                    }
+
+                    mergedGroups.push({
+                        text: txt,
+                        x: ln.x,
+                        firstYTop: ln.yTop,
+                        lastYBottom: ln.yBottom,
+                        maxW: ln.w,
+                        fontH: ln.fontH
+                    });
+                }
+            }
+
+            // 3단계: 각 문단 아래 여백 계산 및 최적 폭·폰트 크기 산출
             const blocks = [];
-            if (syncMode === 'paragraph') {
-                const paragraphs = [];
-                for (const ln of koreanLines) {
-                    const prev = paragraphs[paragraphs.length - 1];
-                    if (
-                        prev &&
-                        Math.abs(ln.x - prev.x) < prev.fontH * 2.5 &&
-                        ln.yTop - prev.yBottom >= -4 &&
-                        ln.yTop - prev.yBottom <= prev.fontH * 1.45
-                    ) {
-                        prev.text += " " + ln.text.trim();
-                        prev.w = Math.max(prev.w, (ln.x + ln.w) - prev.x);
-                        prev.yBottom = Math.max(prev.yBottom, ln.yBottom);
-                    } else {
-                        paragraphs.push({ ...ln, text: ln.text.trim() });
+            mergedGroups.forEach((grp, idx) => {
+                // 바로 아래에 위치한 다음 한글 블록과의 수직 여백 계산
+                let nextYTop = pageH * 0.96;
+                for (let j = 0; j < mergedGroups.length; j++) {
+                    if (j === idx) continue;
+                    const other = mergedGroups[j];
+                    const horizOverlap = (other.x < grp.x + grp.maxW + 40) && (other.x + other.maxW > grp.x - 40);
+                    if (horizOverlap && other.firstYTop > grp.lastYBottom - 2) {
+                        nextYTop = Math.min(nextYTop, other.firstYTop);
                     }
                 }
 
-                paragraphs.forEach((p, idx) => {
-                    const subFontPx = Math.max(8.5, Math.min(11.5, p.fontH * 0.74));
-                    const yAnchor = Math.min(pageH - subFontPx * 1.5, p.yBottom + 2);
-                    const availWidth = Math.max(pageW * 0.36, Math.min(pageW - p.x - 18, Math.max(p.w * 1.15, pageW * 0.45)));
-                    blocks.push({
-                        id: `pdf-p-${idx}-${Date.now()}`,
-                        koText: p.text,
-                        transText: "",
-                        xRatio: Math.max(0.03, Math.min(0.88, p.x / pageW)),
-                        yRatio: Math.max(0.02, Math.min(0.96, yAnchor / pageH)),
-                        wRatio: Math.max(0.22, Math.min(0.92, availWidth / pageW)),
-                        fontRatio: subFontPx / pageH
-                    });
+                const availGap = Math.max(10, nextYTop - grp.lastYBottom);
+                // 여백이 좁으면 폰트를 약간 줄이고 가로 폭을 넓혀 줄바꿈 줄 수를 최소화
+                let subFontPt = Math.max(8.5, Math.min(10.5, grp.fontH * 0.72));
+                if (availGap < 18) subFontPt = Math.max(8.0, Math.min(9.2, availGap * 0.55));
+
+                const yAnchor = Math.min(pageH - 14, grp.lastYBottom + 1.8);
+                // 한글 문단이 끝나는 너비와 조화를 이루되 너무 좁아서 여러 줄로 늘어지지 않도록 최적 폭 산정
+                const maxAvailRightW = Math.max(pageW * 0.28, (pageW * 0.94) - grp.x);
+                const idealW = Math.max(grp.maxW * 1.15, Math.min(maxAvailRightW, Math.max(pageW * 0.42, grp.maxW + 90)));
+
+                blocks.push({
+                    id: `pdf-b-${idx}-${Date.now()}`,
+                    koText: grp.text,
+                    transText: "",
+                    koYTop: grp.firstYTop,
+                    koYBottom: grp.lastYBottom,
+                    availGapPt: availGap,
+                    xRatio: Math.max(0.03, Math.min(0.84, grp.x / pageW)),
+                    yRatio: Math.max(0.02, Math.min(0.95, yAnchor / pageH)),
+                    wRatio: Math.max(0.28, Math.min(0.93 - (grp.x / pageW), idealW / pageW)),
+                    fontRatio: subFontPt / pageH
                 });
-            } else {
-                koreanLines.forEach((ln, idx) => {
-                    const subFontPx = Math.max(8.2, Math.min(11.0, ln.fontH * 0.72));
-                    const yAnchor = Math.min(pageH - subFontPx * 1.4, ln.yBottom + 1.5);
-                    const availWidth = Math.max(pageW * 0.34, Math.min(pageW - ln.x - 16, Math.max(ln.w * 1.18, pageW * 0.42)));
-                    blocks.push({
-                        id: `pdf-l-${idx}-${Date.now()}`,
-                        koText: ln.text.trim(),
-                        transText: "",
-                        xRatio: Math.max(0.03, Math.min(0.88, ln.x / pageW)),
-                        yRatio: Math.max(0.02, Math.min(0.96, yAnchor / pageH)),
-                        wRatio: Math.max(0.22, Math.min(0.92, availWidth / pageW)),
-                        fontRatio: subFontPx / pageH
-                    });
-                });
-            }
+            });
 
             return blocks;
         }
 
         async function convertImageFileToPdfAndCanvas(file) {
-            const dataUrl = await new Promise((resolve, reject) => {
+            const imgDataUrl = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(new Error("이미지 파일을 읽을 수 없습니다."));
                 reader.readAsDataURL(file);
             });
-
-            const img = await new Promise((resolve, reject) => {
+            const img = await new Promise((resolve) => {
                 const image = new Image();
                 image.onload = () => resolve(image);
-                image.onerror = () => reject(new Error("이미지 디코딩에 실패했습니다."));
-                image.src = dataUrl;
+                image.src = imgDataUrl;
             });
-
-            const maxDim = 1100;
-            let dispW = img.naturalWidth || 794;
-            let dispH = img.naturalHeight || 1123;
-            if (dispW > maxDim || dispH > maxDim) {
-                const ratio = Math.min(maxDim / dispW, maxDim / dispH);
-                dispW = Math.round(dispW * ratio);
-                dispH = Math.round(dispH * ratio);
-            }
-
-            const previewCanvas = document.createElement('canvas');
-            previewCanvas.width = dispW;
-            previewCanvas.height = dispH;
-            const ctx = previewCanvas.getContext('2d');
+            const a4W = 595.28, a4H = 841.89;
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(a4W * 1.35);
+            canvas.height = Math.round(a4H * 1.35);
+            const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, dispW, dispH);
-            ctx.drawImage(img, 0, 0, dispW, dispH);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const ratio = Math.min(canvas.width / img.width, canvas.height / img.height);
+            ctx.drawImage(img, (canvas.width - img.width * ratio) / 2, (canvas.height - img.height * ratio) / 2, img.width * ratio, img.height * ratio);
 
             const { PDFDocument } = PDFLib;
             const pdfDoc = await PDFDocument.create();
-            const jpegDataUrl = previewCanvas.toDataURL('image/jpeg', 0.94);
-            const jpgEmbed = await pdfDoc.embedJpg(jpegDataUrl);
-            const page = pdfDoc.addPage([dispW, dispH]);
-            page.drawImage(jpgEmbed, { x: 0, y: 0, width: dispW, height: dispH });
-            const pdfBytes = await pdfDoc.save();
+            const page = pdfDoc.addPage([a4W, a4H]);
+            page.drawImage(await pdfDoc.embedJpg(canvas.toDataURL('image/jpeg', 0.92)), { x: 0, y: 0, width: a4W, height: a4H });
+            return { pdfBuffer: (await pdfDoc.save()).buffer, previewCanvas: canvas, pdfWidth: a4W, pdfHeight: a4H };
+        }
 
-            return {
-                pdfBytesBuffer: pdfBytes.buffer,
-                previewCanvas,
-                dispW,
-                dispH
+        async function extractParagraphsFromHwpOrHwpx(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const arrayBuffer = await file.arrayBuffer();
+            const paragraphs = [];
+
+            if (ext === 'hwpx') {
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                const parser = new DOMParser();
+                for (const secName of Object.keys(zip.files).filter(n => /^Contents\/section\d+\.xml$/i.test(n))) {
+                    const xmlDoc = parser.parseFromString(await zip.files[secName].async('string'), 'text/xml');
+                    for (const node of xmlDoc.getElementsByTagName('*')) {
+                        if (node.localName === 'p') {
+                            let lineStr = '';
+                            for (const t of node.getElementsByTagName('*')) {
+                                if (t.localName === 't' && t.textContent) lineStr += t.textContent;
+                            }
+                            if (isMeaningfulKoreanBlock(lineStr)) paragraphs.push(lineStr.trim());
+                        }
+                    }
+                }
+            } else {
+                // HWP 5.0 바이너리 내 UTF-16LE 한글 텍스트 스트림 정밀 스캔 추출 (외부 cfb 라이브러리 불필요)
+                const bytes = new Uint8Array(arrayBuffer);
+                const u16 = new Uint16Array(arrayBuffer.slice(0, arrayBuffer.byteLength - (arrayBuffer.byteLength % 2)));
+                let current = "";
+                for (let i = 0; i < u16.length; i++) {
+                    const code = u16[i];
+                    const isHangul = (code >= 0xAC00 && code <= 0xD7A3) || (code >= 0x3131 && code <= 0x318E);
+                    const isBasic = (code >= 0x0020 && code <= 0x007E) || (code >= 0x2460 && code <= 0x2473);
+                    if (isHangul || isBasic) {
+                        current += String.fromCharCode(code);
+                    } else {
+                        if (code === 0x000D || code === 0x000A || current.length >= 6) {
+                            const cleaned = current.replace(/\s+/g, " ").trim();
+                            if (cleaned.length >= 4 && /[가-힣]{2,}/.test(cleaned) && !/HWP Document| BinData|Section0/i.test(cleaned)) {
+                                paragraphs.push(cleaned);
+                            }
+                            current = "";
+                        } else {
+                            current = "";
+                        }
+                    }
+                }
+            }
+
+            // 중복 제거 및 문단 정리
+            return Array.from(new Set(paragraphs)).slice(0, 60);
+        }
+
+        async function buildSyntheticPdfAndModelFromParagraphs(paragraphs, targetLang, docType) {
+            const a4W = 595.28, a4H = 841.89;
+            const pageChunks = [];
+            for (let i = 0; i < paragraphs.length; i += 7) pageChunks.push(paragraphs.slice(i, i + 7));
+            if (pageChunks.length === 0) pageChunks.push([originalFileName]);
+
+            const { PDFDocument } = PDFLib;
+            const pdfDoc = await PDFDocument.create();
+            const generatedPages = [];
+
+            for (let pIdx = 0; pIdx < pageChunks.length; pIdx++) {
+                const chunk = pageChunks[pIdx];
+                const transChunk = await translatePdfBlocksBatch(chunk, targetLang, docType);
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(a4W * 1.35);
+                canvas.height = Math.round(a4H * 1.35);
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#0f172a';
+                ctx.font = `800 22px sans-serif`;
+                ctx.fillText(originalFileName, 56, 65);
+
+                const blocks = [];
+                let curYPt = 90;
+                for (let i = 0; i < chunk.length; i++) {
+                    ctx.font = `700 16px sans-serif`;
+                    ctx.fillStyle = '#111827';
+                    ctx.fillText(chunk[i], 56, curYPt);
+                    curYPt += 24;
+
+                    blocks.push({
+                        id: `hwp-${pIdx}-${i}`,
+                        koText: chunk[i],
+                        transText: transChunk[i] || "",
+                        xRatio: 56 / a4W,
+                        yRatio: Math.min(0.92, (curYPt + 2) / a4H),
+                        wRatio: 0.8,
+                        fontRatio: 11 / a4H
+                    });
+                    curYPt += 45;
+                }
+
+                const page = pdfDoc.addPage([a4W, a4H]);
+                page.drawImage(await pdfDoc.embedJpg(canvas.toDataURL('image/jpeg', 0.94)), { x: 0, y: 0, width: a4W, height: a4H });
+                generatedPages.push({ pageNumber: pIdx + 1, pdfWidth: a4W, pdfHeight: a4H, displayWidth: canvas.width, displayHeight: canvas.height, previewCanvas: canvas, blocks });
+            }
+            return { pdfBuffer: (await pdfDoc.save()).buffer, pagesModel: generatedPages };
+        }
+
+        function createSubtitleDomElement(block, pageData, pageEl) {
+            const itemEl = document.createElement('div');
+            itemEl.className = `pdf-subtitle-item subtitle-style-${pdfSubtitleStyle.bgMode}`;
+            itemEl.dataset.blockId = block.id;
+
+            const syncPositionAndStyle = () => {
+                const fontPx = Math.max(9.0, block.fontRatio * pageData.displayHeight * pdfSubtitleStyle.scale);
+                itemEl.style.left = `${block.xRatio * 100}%`;
+                itemEl.style.top = `${block.yRatio * 100}%`;
+                itemEl.style.width = `${block.wRatio * 100}%`;
+                itemEl.style.fontSize = `${fontPx}px`;
+                itemEl.style.color = pdfSubtitleStyle.color;
+                itemEl.className = `pdf-subtitle-item subtitle-style-${pdfSubtitleStyle.bgMode}`;
             };
-        }
+            syncPositionAndStyle();
 
-        async function extractAndTranslatePageWithVision(canvas, targetLang, docType) {
-            const jpegUrl = canvas.toDataURL('image/jpeg', 0.82);
-            const base64Jpeg = jpegUrl.split(',')[1];
-            const contextGuide = getDocTypeInstruction(docType, targetLang);
-
-            const prompt = `이 학습지/교과서 페이지 이미지에서 한국어 문장(제목, 지시문, 본문, 문제 발문 등)을 찾아 ${targetLang}로 번역하고 각 문장 바로 아래 여백의 위치 비율(0.0~1.0)을 반환하세요.
-${contextGuide}
-
-반드시 아래 JSON 배열 형식으로만 응답하세요:
-[
-  {
-    "koText": "원본 한국어 문장",
-    "transText": "${targetLang} 번역문",
-    "xRatio": 0.12,
-    "yRatio": 0.18,
-    "wRatio": 0.75,
-    "fontRatio": 0.012
-  }
-]`;
-
-            const rawBlocks = await callGeminiVisionAPI(prompt, base64Jpeg);
-            if (Array.isArray(rawBlocks) && rawBlocks.length > 0) {
-                return rawBlocks
-                    .filter(b => b && b.transText)
-                    .map((b, idx) => ({
-                        id: `vis-${idx}-${Date.now()}`,
-                        koText: b.koText || "",
-                        transText: String(b.transText).trim(),
-                        xRatio: Math.max(0.03, Math.min(0.88, Number(b.xRatio) || 0.1)),
-                        yRatio: Math.max(0.03, Math.min(0.95, Number(b.yRatio) || (0.15 + idx * 0.08))),
-                        wRatio: Math.max(0.25, Math.min(0.9, Number(b.wRatio) || 0.75)),
-                        fontRatio: Math.max(0.009, Math.min(0.02, Number(b.fontRatio) || 0.011))
-                    }));
-            }
-
-            // 외부 호스팅에서 API 키 없이 스캔 이미지를 넣은 경우 직접 입력 가능한 기본 자막 블록 제공
-            const sampleNotice = await translateSingleTextFallback("여기를 클릭하여 번역 자막을 입력하거나 새 자막을 추가하세요.", resolveTargetLangCode(targetLang));
-            return [{
-                id: `vis-fallback-${Date.now()}`,
-                koText: "직접 편집 자막",
-                transText: sampleNotice || "클릭하여 자막을 수정하세요.",
-                xRatio: 0.10,
-                yRatio: 0.15,
-                wRatio: 0.78,
-                fontRatio: 0.013
-            }];
-        }
-
-        function getActiveStudioScale(pageEl) {
-            const st = pageEl.style.transform || "";
-            const m = st.match(/scale\(([^)]+)\)/);
-            return m ? (parseFloat(m[1]) || 1) : 1;
-        }
-
-        function createSubtitleBlockDOM(pageData, block, pageWrapper) {
-            const subEl = document.createElement('div');
-            subEl.className = `pdf-subtitle-item subtitle-style-${pdfSubtitleStyle.bgMode}`;
-            subEl.dataset.blockId = block.id;
-
-            function syncPositionAndStyle() {
-                subEl.style.left = `${block.xRatio * 100}%`;
-                subEl.style.top = `${block.yRatio * 100}%`;
-                subEl.style.width = `${block.wRatio * 100}%`;
-                const pxSize = Math.max(8.5, block.fontRatio * pageData.displayHeight * pdfSubtitleStyle.scale);
-                subEl.style.fontSize = `${pxSize}px`;
-                subEl.style.color = pdfSubtitleStyle.color;
-                subEl.classList.remove('subtitle-style-halo', 'subtitle-style-plain', 'subtitle-style-box');
-                subEl.classList.add(`subtitle-style-${pdfSubtitleStyle.bgMode}`);
-            }
-
-            const toolbar = document.createElement('div');
-            toolbar.className = 'sub-toolbar';
-            toolbar.innerHTML = `
-                <span class="cursor-move select-none">✥ 드래그 이동</span>
-                <span class="text-slate-400">|</span>
-                <button type="button" class="sub-del-btn text-red-300 hover:text-red-100 font-bold">✕ 삭제</button>
+            itemEl.innerHTML = `
+                <div class="sub-toolbar">
+                    <span class="cursor-move">✥ 드래그 이동 · ✏️ 클릭 수정</span>
+                    <button type="button" class="sub-del-btn text-red-300 hover:text-red-100 font-extrabold ml-2">✕ 삭제</button>
+                </div>
+                <div class="sub-text outline-none" contenteditable="true" spellcheck="false">${block.transText}</div>
+                <div class="sub-resize-handle" title="좌우로 끌어 줄바꿈 폭 조절"></div>
             `;
 
-            const textSpan = document.createElement('div');
-            textSpan.className = 'sub-text outline-none';
-            textSpan.contentEditable = "true";
-            textSpan.spellcheck = false;
-            textSpan.textContent = block.transText;
-
-            const resizeHandle = document.createElement('div');
-            resizeHandle.className = 'sub-resize-handle';
-            resizeHandle.title = '좌우로 끌어 줄바꿈 폭 조절';
-
-            subEl.appendChild(toolbar);
-            subEl.appendChild(textSpan);
-            subEl.appendChild(resizeHandle);
-
-            textSpan.addEventListener('input', () => {
-                block.transText = textSpan.innerText.trim();
+            itemEl.querySelector('.sub-text').addEventListener('input', (e) => {
+                block.transText = e.target.innerText.trim();
             });
-
-            toolbar.querySelector('.sub-del-btn').addEventListener('click', (e) => {
+            itemEl.querySelector('.sub-del-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 pageData.blocks = pageData.blocks.filter(b => b.id !== block.id);
-                subEl.remove();
+                itemEl.remove();
             });
 
-            // 드래그 이동 (마우스 & 모바일 터치 통합 Pointer Events)
-            let isDragging = false;
-            let startClientX = 0;
-            let startClientY = 0;
-            let startXRatio = 0;
-            let startYRatio = 0;
-
-            subEl.addEventListener('pointerdown', (e) => {
-                if (e.target === resizeHandle || e.target.closest('.sub-del-btn')) return;
-                document.querySelectorAll('.pdf-subtitle-item.selected-sub').forEach(el => {
-                    if (el !== subEl) el.classList.remove('selected-sub');
-                });
-                subEl.classList.add('selected-sub');
-
-                // 텍스트를 직접 더블클릭/포커스 편집 중일 때는 커서 이동 허용
-                if (document.activeElement === textSpan && e.target === textSpan) return;
-
+            // 위치 이동 드래그
+            let isDragging = false, startX = 0, startY = 0, origX = 0, origY = 0;
+            itemEl.addEventListener('pointerdown', (e) => {
+                if (e.target.classList.contains('sub-resize-handle') || e.target.classList.contains('sub-del-btn')) return;
+                if (document.activeElement === itemEl.querySelector('.sub-text')) return;
                 isDragging = true;
-                startClientX = e.clientX;
-                startClientY = e.clientY;
-                startXRatio = block.xRatio;
-                startYRatio = block.yRatio;
-                subEl.setPointerCapture(e.pointerId);
-                e.preventDefault();
+                startX = e.clientX;
+                startY = e.clientY;
+                origX = block.xRatio;
+                origY = block.yRatio;
+                itemEl.classList.add('selected-sub');
+                itemEl.setPointerCapture(e.pointerId);
             });
-
-            subEl.addEventListener('pointermove', (e) => {
+            itemEl.addEventListener('pointermove', (e) => {
                 if (!isDragging) return;
-                const scale = getActiveStudioScale(pageWrapper);
-                const dx = (e.clientX - startClientX) / (pageData.displayWidth * scale);
-                const dy = (e.clientY - startClientY) / (pageData.displayHeight * scale);
-                block.xRatio = Math.max(0.01, Math.min(0.92, startXRatio + dx));
-                block.yRatio = Math.max(0.01, Math.min(0.96, startYRatio + dy));
-                subEl.style.left = `${block.xRatio * 100}%`;
-                subEl.style.top = `${block.yRatio * 100}%`;
+                const rect = pageEl.getBoundingClientRect();
+                block.xRatio = Math.max(0.01, Math.min(0.92, origX + (e.clientX - startX) / rect.width));
+                block.yRatio = Math.max(0.01, Math.min(0.96, origY + (e.clientY - startY) / rect.height));
+                syncPositionAndStyle();
             });
-
-            subEl.addEventListener('pointerup', (e) => {
-                if (!isDragging) return;
+            itemEl.addEventListener('pointerup', () => {
                 isDragging = false;
-                try { subEl.releasePointerCapture(e.pointerId); } catch (err) {}
-                if (Math.hypot(e.clientX - startClientX, e.clientY - startClientY) < 4 && e.target === textSpan) {
-                    textSpan.focus();
-                }
+                setTimeout(() => itemEl.classList.remove('selected-sub'), 600);
             });
 
-            // 우측 핸들로 가로 줄바꿈 폭 조절
-            let isResizing = false;
-            let resizeStartX = 0;
-            let startWRatio = 0;
-
+            // 우측 핸들로 줄바꿈 가로폭(wRatio) 조절
+            const resizeHandle = itemEl.querySelector('.sub-resize-handle');
+            let isResizing = false, rStartX = 0, origW = 0;
             resizeHandle.addEventListener('pointerdown', (e) => {
                 e.stopPropagation();
-                e.preventDefault();
                 isResizing = true;
-                resizeStartX = e.clientX;
-                startWRatio = block.wRatio;
+                rStartX = e.clientX;
+                origW = block.wRatio;
                 resizeHandle.setPointerCapture(e.pointerId);
             });
-
             resizeHandle.addEventListener('pointermove', (e) => {
                 if (!isResizing) return;
-                const scale = getActiveStudioScale(pageWrapper);
-                const dw = (e.clientX - resizeStartX) / (pageData.displayWidth * scale);
-                block.wRatio = Math.max(0.15, Math.min(0.96 - block.xRatio, startWRatio + dw));
-                subEl.style.width = `${block.wRatio * 100}%`;
+                const rect = pageEl.getBoundingClientRect();
+                block.wRatio = Math.max(0.15, Math.min(0.96 - block.xRatio, origW + (e.clientX - rStartX) / rect.width));
+                syncPositionAndStyle();
             });
-
             resizeHandle.addEventListener('pointerup', (e) => {
-                if (!isResizing) return;
+                e.stopPropagation();
                 isResizing = false;
-                try { resizeHandle.releasePointerCapture(e.pointerId); } catch (err) {}
             });
 
-            syncPositionAndStyle();
-            subEl._syncStyle = syncPositionAndStyle;
-            return subEl;
-        }
-
-        function refreshAllPdfSubtitlesStyle() {
-            document.querySelectorAll('#pdf-studio-pages-container .pdf-subtitle-item').forEach(el => {
-                if (typeof el._syncStyle === 'function') el._syncStyle();
-            });
+            return itemEl;
         }
 
         function renderPdfStudio() {
             const container = document.getElementById('pdf-studio-pages-container');
             container.innerHTML = '';
-
-            pdfPagesModel.forEach((pageData) => {
-                const pageWrapper = document.createElement('div');
-                pageWrapper.className = 'pdf-studio-page';
-                pageWrapper.style.width = `${pageData.displayWidth}px`;
-                pageWrapper.style.height = `${pageData.displayHeight}px`;
-
-                const bgCanvas = document.createElement('canvas');
-                bgCanvas.className = 'bg-pdf-canvas';
-                bgCanvas.width = pageData.displayWidth;
-                bgCanvas.height = pageData.displayHeight;
-                const bgCtx = bgCanvas.getContext('2d');
-                bgCtx.drawImage(pageData.previewCanvas, 0, 0, pageData.displayWidth, pageData.displayHeight);
-                pageWrapper.appendChild(bgCanvas);
-
-                pageData.blocks.forEach(block => {
-                    const subEl = createSubtitleBlockDOM(pageData, block, pageWrapper);
-                    pageWrapper.appendChild(subEl);
-                });
-
-                container.appendChild(pageWrapper);
+            pdfPagesModel.forEach(pageData => {
+                const pageEl = document.createElement('div');
+                pageEl.className = 'pdf-studio-page';
+                pageEl.style.width = `${pageData.displayWidth}px`;
+                pageEl.style.height = `${pageData.displayHeight}px`;
+                pageData.previewCanvas.className = 'bg-pdf-canvas';
+                pageEl.appendChild(pageData.previewCanvas);
+                pageData.blocks.forEach(block => pageEl.appendChild(createSubtitleDomElement(block, pageData, pageEl)));
+                container.appendChild(pageEl);
             });
-
             currentZoomMode = 'fit';
             setTimeout(applyResponsivePreviewScale, 50);
-        }
-
-        // 자막 스튜디오 상단 컨트롤 바 이벤트 연결
-        document.getElementById('pdf-font-scale').addEventListener('input', (e) => {
-            const val = parseInt(e.target.value, 10) || 100;
-            pdfSubtitleStyle.scale = val / 100;
-            document.getElementById('pdf-font-scale-label').textContent = `${val}%`;
-            refreshAllPdfSubtitlesStyle();
-        });
-
-        document.querySelectorAll('.pdf-color-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.pdf-color-btn').forEach(b => {
-                    b.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-600');
-                });
-                btn.classList.add('ring-2', 'ring-offset-2', 'ring-blue-600');
-                pdfSubtitleStyle.color = btn.getAttribute('data-color') || '#1d4ed8';
-                refreshAllPdfSubtitlesStyle();
-            });
-        });
-
-        document.getElementById('pdf-bg-style').addEventListener('change', (e) => {
-            pdfSubtitleStyle.bgMode = e.target.value || 'halo';
-            refreshAllPdfSubtitlesStyle();
-        });
-
-        document.getElementById('add-pdf-subtitle-btn').addEventListener('click', () => {
-            if (!pdfPagesModel || pdfPagesModel.length === 0) return;
-            const firstPage = pdfPagesModel[0];
-            const newBlock = {
-                id: `custom-sub-${Date.now()}`,
-                koText: "사용자 추가 자막",
-                transText: "새 자막 내용을 입력하세요",
-                xRatio: 0.15,
-                yRatio: 0.20,
-                wRatio: 0.65,
-                fontRatio: 0.013
-            };
-            firstPage.blocks.push(newBlock);
-            const firstPageWrapper = document.querySelector('#pdf-studio-pages-container .pdf-studio-page');
-            if (firstPageWrapper) {
-                const subEl = createSubtitleBlockDOM(firstPage, newBlock, firstPageWrapper);
-                firstPageWrapper.appendChild(subEl);
-                showToast("1쪽에 새 자막 박스가 추가되었습니다. 원하는 위치로 드래그하세요!", "success");
-            }
-        });
-
-        // ============================================================================
-        // [HWP / HWPX 파서 & A4 이중언어 자막 스튜디오 PDF 렌더러]
-        // ============================================================================
-        function decodeHwpParaTextRecord(uint8Payload) {
-            let text = "";
-            const view = new DataView(uint8Payload.buffer, uint8Payload.byteOffset, uint8Payload.byteLength);
-            const totalLen = uint8Payload.byteLength;
-            let offset = 0;
-
-            while (offset + 1 < totalLen) {
-                const code = view.getUint16(offset, true);
-                if (code === 0) {
-                    offset += 2;
-                } else if (
-                    code === 1 || code === 2 || code === 3 ||
-                    (code >= 11 && code <= 18) ||
-                    (code >= 21 && code <= 23) ||
-                    (code >= 4 && code <= 9) ||
-                    code === 19 || code === 20
-                ) {
-                    // HWP 5.0 확장/인라인 제어문자는 총 8 WCHAR (16 바이트) 차지
-                    offset += 16;
-                } else if (code === 10 || code === 13) {
-                    text += "\n";
-                    offset += 2;
-                } else if (code === 9) {
-                    text += " ";
-                    offset += 2;
-                } else if (code < 32) {
-                    offset += 2;
-                } else {
-                    text += String.fromCharCode(code);
-                    offset += 2;
-                }
-            }
-            return text.replace(/\s+/g, " ").trim();
-        }
-
-        function parseHwpSectionStream(streamBytes, isCompressed) {
-            let rawData = streamBytes instanceof Uint8Array ? streamBytes : new Uint8Array(streamBytes);
-            if (isCompressed) {
-                try {
-                    rawData = pako.inflateRaw(rawData);
-                } catch (e1) {
-                    try {
-                        rawData = pako.inflate(rawData);
-                    } catch (e2) {
-                        return [];
-                    }
-                }
-            }
-
-            const paragraphs = [];
-            const view = new DataView(rawData.buffer, rawData.byteOffset, rawData.byteLength);
-            let pos = 0;
-            const len = rawData.byteLength;
-
-            while (pos + 4 <= len) {
-                const header = view.getUint32(pos, true);
-                pos += 4;
-                const tagId = header & 0x3FF;
-                let size = (header >>> 20) & 0xFFF;
-                if (size === 0xFFF) {
-                    if (pos + 4 > len) break;
-                    size = view.getUint32(pos, true);
-                    pos += 4;
-                }
-                if (pos + size > len) break;
-
-                // HWPTAG_PARA_TEXT === 67
-                if (tagId === 67 && size >= 2) {
-                    const recordSlice = rawData.subarray(pos, pos + size);
-                    const paraStr = decodeHwpParaTextRecord(recordSlice);
-                    if (paraStr && paraStr.length >= 2 && /[가-힣a-zA-Z0-9]/.test(paraStr)) {
-                        paragraphs.push(paraStr);
-                    }
-                }
-                pos += size;
-            }
-            return paragraphs;
-        }
-
-        async function extractParagraphsFromHwpOrHwpx(file) {
-            const fileNameLower = file.name.toLowerCase();
-            const arrayBuffer = await file.arrayBuffer();
-            const uint8 = new Uint8Array(arrayBuffer);
-
-            // 1. ZIP 시그니처(PK\x03\x04) 또는 .hwpx 파일인 경우 (OWPML XML 파싱)
-            const isZipSignature = uint8.length > 4 && uint8[0] === 0x50 && uint8[1] === 0x4B;
-            if (fileNameLower.endsWith('.hwpx') || isZipSignature) {
-                const zip = await JSZip.loadAsync(arrayBuffer);
-                const sectionFiles = Object.keys(zip.files)
-                    .filter(name => /^Contents\/section\d+\.xml$/i.test(name))
-                    .sort((a, b) => {
-                        const na = parseInt(a.match(/(\d+)/)?.[1] || "0", 10);
-                        const nb = parseInt(b.match(/(\d+)/)?.[1] || "0", 10);
-                        return na - nb;
-                    });
-
-                const paragraphs = [];
-                const parser = new DOMParser();
-
-                for (const secPath of sectionFiles) {
-                    const xmlText = await zip.file(secPath).async("string");
-                    const xmlDoc = parser.parseFromString(xmlText, "application/xml");
-                    const pNodes = Array.from(xmlDoc.getElementsByTagNameNS("*", "p"));
-                    if (pNodes.length > 0) {
-                        for (const pNode of pNodes) {
-                            // 중첩 문단 중복 방지: 가장 하위 문단 또는 직접 텍스트를 가진 문단 추출
-                            const tNodes = Array.from(pNode.getElementsByTagNameNS("*", "t"));
-                            if (tNodes.length === 0) continue;
-                            const combined = tNodes.map(t => t.textContent || "").join("").replace(/\s+/g, " ").trim();
-                            if (combined && combined.length >= 2 && paragraphs[paragraphs.length - 1] !== combined) {
-                                paragraphs.push(combined);
-                            }
-                        }
-                    } else {
-                        const rawMatches = xmlText.match(/<[^>]*:?t[^>]*>([\s\S]*?)<\/[^>]*:?t>/g) || [];
-                        const joined = rawMatches.map(m => m.replace(/<[^>]+>/g, "").trim()).filter(Boolean).join(" ");
-                        if (joined) paragraphs.push(joined);
-                    }
-                }
-
-                if (paragraphs.length === 0 && zip.file("Preview/PrvText.txt")) {
-                    const prvTxt = await zip.file("Preview/PrvText.txt").async("string");
-                    prvTxt.split(/\r?\n/).forEach(line => {
-                        const cl = line.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-                        if (cl.length >= 2) paragraphs.push(cl);
-                    });
-                }
-                return deduplicateConsecutiveParagraphs(paragraphs);
-            }
-
-            // 2. HWP 5.0 OLE2 복합 문서 (.hwp) 파싱
-            if (typeof CFB !== 'undefined') {
-                const cfbContainer = CFB.read(uint8, { type: 'array' });
-                let isCompressed = true;
-
-                const headerEntry = CFB.find(cfbContainer, 'FileHeader');
-                if (headerEntry && headerEntry.content && headerEntry.content.length >= 40) {
-                    const hdrBytes = headerEntry.content instanceof Uint8Array
-                        ? headerEntry.content
-                        : new Uint8Array(headerEntry.content);
-                    const flags = new DataView(hdrBytes.buffer, hdrBytes.byteOffset, hdrBytes.byteLength).getUint32(36, true);
-                    isCompressed = (flags & 0x01) !== 0;
-                }
-
-                const sectionEntries = (cfbContainer.FullPaths || [])
-                    .map((path, idx) => ({ path, entry: cfbContainer.FileIndex[idx] }))
-                    .filter(item => /BodyText\/Section\d+$/i.test(item.path))
-                    .sort((a, b) => {
-                        const na = parseInt(a.path.match(/Section(\d+)/i)?.[1] || "0", 10);
-                        const nb = parseInt(b.path.match(/Section(\d+)/i)?.[1] || "0", 10);
-                        return na - nb;
-                    });
-
-                let allParas = [];
-                for (const sec of sectionEntries) {
-                    if (sec.entry && sec.entry.content) {
-                        const extracted = parseHwpSectionStream(sec.entry.content, isCompressed);
-                        allParas.push(...extracted);
-                    }
-                }
-
-                // 만약 배포용 문서 암호화 등으로 BodyText가 비어있다면 PrvText(미리보기 텍스트 스트림)에서 추출
-                if (allParas.length === 0) {
-                    const prvEntry = CFB.find(cfbContainer, 'PrvText');
-                    if (prvEntry && prvEntry.content) {
-                        const prvBytes = prvEntry.content instanceof Uint8Array
-                            ? prvEntry.content
-                            : new Uint8Array(prvEntry.content);
-                        const decoder = new TextDecoder('utf-16le');
-                        const prvText = decoder.decode(prvBytes);
-                        prvText.split(/\r?\n/).forEach(line => {
-                            const cleaned = line.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-                            if (cleaned.length >= 2) allParas.push(cleaned);
-                        });
-                    }
-                }
-
-                return deduplicateConsecutiveParagraphs(allParas);
-            }
-
-            return [];
-        }
-
-        function deduplicateConsecutiveParagraphs(arr) {
-            const result = [];
-            for (const item of arr) {
-                const cleaned = item.replace(/[\x00-\x1F\uF000-\uFFFF]/g, "").trim();
-                if (!cleaned || cleaned.length < 2) continue;
-                if (result.length === 0 || result[result.length - 1] !== cleaned) {
-                    result.push(cleaned);
-                }
-            }
-            return result;
-        }
-
-        async function convertHwpParagraphsToPdfAndStudioModel(paragraphs, rawTitle, targetLang, docType) {
-            const pageW = 794;
-            const pageH = 1123;
-            const marginX = 56;
-            const contentW = pageW - marginX * 2;
-            const fontFamily = "'Pretendard', 'Noto Sans KR', sans-serif";
-
-            // 1. 먼저 AI로 모든 한글 문단을 일괄 번역
-            const koreanList = paragraphs.map(p => p.trim()).filter(p => /[가-힣]/.test(p));
-            const transMap = new Map();
-            const batchSize = 22;
-
-            for (let i = 0; i < koreanList.length; i += batchSize) {
-                const slice = koreanList.slice(i, i + batchSize);
-                const pct = 30 + Math.floor((i / Math.max(1, koreanList.length)) * 50);
-                updateProgress(pct, `HWP 한글 문서 문단 AI 번역 중... (${Math.min(koreanList.length, i + slice.length)}/${koreanList.length})`);
-                const translatedSlice = await translatePdfBlocksBatch(slice, targetLang, docType);
-                slice.forEach((koStr, idx) => {
-                    transMap.set(koStr, (translatedSlice[idx] || "").trim());
-                });
-            }
-
-            // 2. A4 페이지 캔버스에 한글 원문을 조판하면서 각 문단 바로 아래에 다국어 자막 공간과 싱크 좌표를 확보
-            const measureCanvas = document.createElement('canvas');
-            const mCtx = measureCanvas.getContext('2d');
-
-            const pagesData = [];
-            let currentCanvas = null;
-            let currentCtx = null;
-            let currentBlocks = [];
-            let cursorY = 0;
-            let pageIndex = 0;
-
-            function startNewHwpPage() {
-                pageIndex++;
-                const canvas = document.createElement('canvas');
-                canvas.width = pageW;
-                canvas.height = pageH;
-                const ctx = canvas.getContext('2d');
-
-                // 흰색 배경 및 상단 문서 헤더
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, pageW, pageH);
-
-                ctx.strokeStyle = '#cbd5e1';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(marginX, 74);
-                ctx.lineTo(pageW - marginX, 74);
-                ctx.stroke();
-
-                ctx.fillStyle = '#475569';
-                ctx.font = `700 13px ${fontFamily}`;
-                ctx.textBaseline = 'top';
-                const cleanDocTitle = cleanTopicName(rawTitle);
-                ctx.fillText(`📄 ${cleanDocTitle}`, marginX, 46);
-
-                ctx.fillStyle = '#64748b';
-                ctx.font = `600 12px ${fontFamily}`;
-                const pageBadge = `${pageIndex}쪽`;
-                const badgeW = ctx.measureText(pageBadge).width;
-                ctx.fillText(pageBadge, pageW - marginX - badgeW, 47);
-
-                currentCanvas = canvas;
-                currentCtx = ctx;
-                currentBlocks = [];
-                cursorY = 96;
-
-                if (pageIndex === 1) {
-                    // 첫 페이지 상단 문서 제목 블록
-                    ctx.fillStyle = '#0f172a';
-                    ctx.font = `800 22px ${fontFamily}`;
-                    const titleLines = wrapMultilingualText(ctx, cleanDocTitle, contentW);
-                    for (const tLine of titleLines) {
-                        ctx.fillText(tLine, marginX, cursorY);
-                        cursorY += 30;
-                    }
-                    cursorY += 16;
-                }
-
-                pagesData.push({
-                    pageNumber: pageIndex,
-                    pdfWidth: pageW,
-                    pdfHeight: pageH,
-                    displayWidth: pageW,
-                    displayHeight: pageH,
-                    previewCanvas: canvas,
-                    blocks: currentBlocks
-                });
-            }
-
-            startNewHwpPage();
-
-            for (let idx = 0; idx < paragraphs.length; idx++) {
-                const para = paragraphs[idx].trim();
-                if (!para) continue;
-
-                const isHeading = idx === 0 || (para.length <= 36 && (/^[0-9ⅠⅡⅢⅣⅤ一-龥가-하][\.\)]/.test(para) || /^[\[【<〈「『]/.test(para)));
-                const koFontSize = isHeading ? 17 : 14.5;
-                const koFontWeight = isHeading ? '800' : '600';
-                const koLineHeight = koFontSize * 1.48;
-
-                mCtx.font = `${koFontWeight} ${koFontSize}px ${fontFamily}`;
-                const koLines = wrapMultilingualText(mCtx, para, contentW - 8);
-
-                const transText = transMap.get(para) || "";
-                const subFontSize = isHeading ? 12.5 : 11.2;
-                const subLineHeight = subFontSize * 1.28;
-                mCtx.font = `600 ${subFontSize}px ${fontFamily}`;
-                const transLines = transText ? wrapMultilingualText(mCtx, transText, contentW - 12) : [];
-
-                const neededKoHeight = koLines.length * koLineHeight;
-                const neededSubHeight = transLines.length > 0 ? (transLines.length * subLineHeight + 10) : 6;
-                const totalBlockHeight = neededKoHeight + neededSubHeight + 18;
-
-                if (cursorY + totalBlockHeight > pageH - 64 && cursorY > 130) {
-                    startNewHwpPage();
-                }
-
-                // 한글 문단 좌측 포인트 바 (가독성 향상)
-                if (isHeading) {
-                    currentCtx.fillStyle = '#eff6ff';
-                    currentCtx.fillRect(marginX - 6, cursorY - 4, contentW + 12, neededKoHeight + 6);
-                }
-
-                currentCtx.fillStyle = isHeading ? '#0f172a' : '#1e293b';
-                currentCtx.font = `${koFontWeight} ${koFontSize}px ${fontFamily}`;
-                currentCtx.textBaseline = 'top';
-
-                for (const lineStr of koLines) {
-                    currentCtx.fillText(lineStr, marginX, cursorY);
-                    cursorY += koLineHeight;
-                }
-
-                // 한글 문단 바로 아래에 다국어 자막 블록 배치
-                if (transText) {
-                    const subYAnchor = cursorY + 2;
-                    currentBlocks.push({
-                        id: `hwp-sub-${pageIndex}-${idx}-${Date.now()}`,
-                        koText: para,
-                        transText: transText,
-                        xRatio: marginX / pageW,
-                        yRatio: subYAnchor / pageH,
-                        wRatio: (contentW - 8) / pageW,
-                        fontRatio: subFontSize / pageH
-                    });
-                    cursorY += neededSubHeight + 16;
-                } else {
-                    cursorY += 12;
-                }
-            }
-
-            // 3. 조판된 HWP A4 캔버스들을 기반으로 PDF-Lib 원본 버퍼(rawPdfLibBuffer) 생성 -> 최종 발행물은 100% PDF
-            const { PDFDocument } = PDFLib;
-            const pdfDoc = await PDFDocument.create();
-            for (const pData of pagesData) {
-                const jpgUrl = pData.previewCanvas.toDataURL('image/jpeg', 0.95);
-                const embeddedJpg = await pdfDoc.embedJpg(jpgUrl);
-                const page = pdfDoc.addPage([pageW, pageH]);
-                page.drawImage(embeddedJpg, { x: 0, y: 0, width: pageW, height: pageH });
-            }
-            const savedBytes = await pdfDoc.save();
-
-            return {
-                pdfBytesBuffer: savedBytes.buffer,
-                pagesData
-            };
         }
 
         async function handlePdfOrImageFile(file) {
             if (!file) return;
             cleanupSessionMemory();
             originalFileName = file.name;
-            const fileNameLower = file.name.toLowerCase();
             const targetLang = getSelectedTargetLanguage();
-            const docType = document.getElementById('pdf-doc-type').value;
-            const syncMode = document.getElementById('pdf-sync-mode').value;
+            const docType = document.getElementById('pdf-doc-type').value || 'general';
+            const syncMode = document.getElementById('pdf-sync-mode').value || 'smart';
+            const ext = file.name.split('.').pop().toLowerCase();
 
             document.getElementById('pdf-section').classList.add('hidden');
             document.getElementById('language-section').classList.add('hidden');
@@ -2072,524 +1630,343 @@ ${contextGuide}
             document.getElementById('header-reset-btn').classList.remove('hidden');
 
             try {
-                if (document.fonts && document.fonts.ready) await document.fonts.ready;
-                pdfPagesModel = [];
-
-                const isHwpFile = fileNameLower.endsWith('.hwp') || fileNameLower.endsWith('.hwpx');
-
-                if (isHwpFile) {
-                    log(`[HWP/HWPX 한글 문서 모드] 문서 구조 및 본문 추출 중... (${file.name})`);
-                    updateProgress(12, `한글 문서(${file.name})의 본문과 표 텍스트를 추출하는 중...`);
-
+                if (ext === 'hwp' || ext === 'hwpx') {
+                    updateProgress(30, "한글 문서에서 텍스트 추출 중...");
                     const paragraphs = await extractParagraphsFromHwpOrHwpx(file);
-                    if (!paragraphs || paragraphs.length === 0) {
-                        throw new Error("한글(HWP) 문서에서 텍스트를 추출하지 못했습니다. 배포용 암호 설정 여부를 확인해 주세요.");
-                    }
-
-                    log(`한글 문서 문단 ${paragraphs.length}개 추출 완료. ${targetLang} 자막 병기 및 PDF 조판 시작...`);
-                    const { pdfBytesBuffer, pagesData } = await convertHwpParagraphsToPdfAndStudioModel(
-                        paragraphs,
-                        file.name,
-                        targetLang,
-                        docType
-                    );
-
-                    rawPdfLibBuffer = pdfBytesBuffer;
-                    pdfPagesModel = pagesData;
-                    log(`HWP -> 다국어 자막 병기 PDF 변환 완료 (총 ${pdfPagesModel.length}쪽).`);
-
-                } else if (file.type.startsWith('image/')) {
-                    log(`[사진 촬영/이미지 모드] 이미지 불러오는 중... (${file.name})`);
-                    updateProgress(20, `학습지 사진을 분석하고 ${targetLang} 자막 위치를 찾는 중...`);
-                    const { pdfBytesBuffer, previewCanvas, dispW, dispH } = await convertImageFileToPdfAndCanvas(file);
-                    rawPdfLibBuffer = pdfBytesBuffer;
-
-                    const blocks = await extractAndTranslatePageWithVision(previewCanvas, targetLang, docType);
-                    log(`AI 비전 인식 완료: 자막 블록 ${blocks.length}개 생성.`);
-
-                    pdfPagesModel.push({
-                        pageNumber: 1,
-                        pdfWidth: dispW,
-                        pdfHeight: dispH,
-                        displayWidth: dispW,
-                        displayHeight: dispH,
-                        previewCanvas,
-                        blocks
-                    });
+                    const built = await buildSyntheticPdfAndModelFromParagraphs(paragraphs, targetLang, docType);
+                    rawPdfLibBuffer = built.pdfBuffer;
+                    pdfPagesModel = built.pagesModel;
+                } else if (file.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+                    updateProgress(30, "학습지 이미지 변환 중...");
+                    const imgBuilt = await convertImageFileToPdfAndCanvas(file);
+                    rawPdfLibBuffer = imgBuilt.pdfBuffer;
+                    pdfPagesModel = [{
+                        pageNumber: 1, pdfWidth: imgBuilt.pdfWidth, pdfHeight: imgBuilt.pdfHeight,
+                        displayWidth: imgBuilt.previewCanvas.width, displayHeight: imgBuilt.previewCanvas.height,
+                        previewCanvas: imgBuilt.previewCanvas,
+                        blocks: [{ id: 'img-1', koText: '이미지 학습지', transText: `[${targetLang} 자막] 상단 '새 자막 추가'로 자막을 생성하세요.`, xRatio: 0.1, yRatio: 0.15, wRatio: 0.8, fontRatio: 0.015 }]
+                    }];
                 } else {
-                    log(`[PDF 모드] 문서 로드 중... (${file.name})`);
-                    updateProgress(8, "PDF 문서 구조 및 텍스트 레이어 분석 중...");
-
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdfJsBuffer = arrayBuffer.slice(0);
-                    rawPdfLibBuffer = arrayBuffer.slice(0);
-
-                    const pdf = await pdfjsLib.getDocument({
-                        data: pdfJsBuffer,
-                        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                        cMapPacked: true,
-                        standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/'
-                    }).promise;
-                    const totalPages = pdf.numPages;
-
-                    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-                        const progressBase = 10 + Math.floor(((pageNum - 1) / totalPages) * 78);
-                        updateProgress(progressBase, `${pageNum}/${totalPages}쪽 레이아웃 분석 및 ${targetLang} 자막 생성 중...`);
-
-                        const page = await pdf.getPage(pageNum);
-                        const baseViewport = page.getViewport({ scale: 1.0 });
-                        const previewScale = Math.min(1.6, 780 / baseViewport.width);
-                        const previewViewport = page.getViewport({ scale: previewScale });
-
-                        const previewCanvas = document.createElement('canvas');
-                        previewCanvas.width = Math.round(previewViewport.width);
-                        previewCanvas.height = Math.round(previewViewport.height);
-                        const ctx = previewCanvas.getContext('2d');
-                        await page.render({ canvasContext: ctx, viewport: previewViewport }).promise;
+                    updateProgress(10, "PDF 문서 분석 중...");
+                    const rawBuffer = await file.arrayBuffer();
+                    rawPdfLibBuffer = rawBuffer.slice(0);
+                    const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(rawBuffer) }).promise;
+                    
+                    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                        updateProgress(15 + Math.floor((pageNum / pdfDoc.numPages) * 75), `${pageNum} / ${pdfDoc.numPages}쪽 분석 및 번역 중...`);
+                        const page = await pdfDoc.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 1.35 });
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(viewport.width);
+                        canvas.height = Math.round(viewport.height);
+                        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
 
                         const textContent = await page.getTextContent();
-                        let blocks = analyzePdfPageLayout(textContent, baseViewport, syncMode);
-
-                        if (blocks.length >= 2) {
-                            log(`${pageNum}쪽: 텍스트 블록 ${blocks.length}개 감지. AI 번역 중...`);
-                            const batchSize = 25;
-                            for (let b = 0; b < blocks.length; b += batchSize) {
-                                const slice = blocks.slice(b, b + batchSize);
-                                const koArray = slice.map(item => item.koText);
-                                const transArray = await translatePdfBlocksBatch(koArray, targetLang, docType);
-                                slice.forEach((item, idx) => {
-                                    item.transText = (transArray[idx] || "").trim();
-                                });
-                            }
-                        } else {
-                            log(`${pageNum}쪽: 스캔/이미지 페이지 감지 -> AI Vision OCR 가동 중...`);
-                            blocks = await extractAndTranslatePageWithVision(previewCanvas, targetLang, docType);
-                        }
+                        const blocks = analyzePdfPageLayout(textContent, page.getViewport({ scale: 1.0 }), syncMode);
+                        const koTexts = blocks.map(b => b.koText);
+                        const transTexts = await translatePdfBlocksBatch(koTexts, targetLang, docType);
+                        blocks.forEach((b, i) => b.transText = transTexts[i] || "");
 
                         pdfPagesModel.push({
-                            pageNumber: pageNum,
-                            pdfWidth: baseViewport.width,
-                            pdfHeight: baseViewport.height,
-                            displayWidth: previewCanvas.width,
-                            displayHeight: previewCanvas.height,
-                            previewCanvas,
-                            blocks: blocks.filter(b => b.transText && b.transText.length > 0)
+                            pageNumber: pageNum, pdfWidth: page.getViewport({ scale: 1.0 }).width, pdfHeight: page.getViewport({ scale: 1.0 }).height,
+                            displayWidth: canvas.width, displayHeight: canvas.height, previewCanvas: canvas,
+                            blocks: blocks.filter(b => b.transText)
                         });
                     }
                 }
 
-                updateProgress(95, "모바일·PC 반응형 자막 스튜디오 렌더링 중...");
-                renderPdfStudio();
-
                 updateProgress(100, "완료!");
                 setTimeout(() => {
                     document.getElementById('status-section').classList.add('hidden');
-                    document.getElementById('success-title').textContent = `${targetLang} 자막 오버레이 완성!`;
-                    document.getElementById('success-desc').textContent = "자막을 터치/드래그하여 다듬거나, PDF 및 이미지로 바로 저장·공유하세요.";
+                    document.getElementById('success-title').textContent = `${targetLang} 이중언어 변환 완료!`;
                     document.getElementById('pdf-studio-controls').classList.remove('hidden');
                     document.getElementById('pdf-studio-wrapper').classList.remove('hidden');
                     document.getElementById('success-section').classList.remove('hidden');
-                    applyResponsivePreviewScale();
-                }, 300);
-
-            } catch (error) {
-                console.error(error);
-                log(`에러 발생: ${error.message}`);
-                showToast(`처리 중 오류가 발생했습니다: ${error.message}`, 'error');
-                setTimeout(() => resetWorkspaceToHome(), 2200);
+                    renderPdfStudio();
+                }, 200);
+            } catch (err) {
+                console.error(err);
+                showToast(`오류: ${err.message}`, 'error');
+                resetWorkspaceToHome();
             }
         }
 
-        document.getElementById('pdf-input').addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handlePdfOrImageFile(e.target.files[0]);
+        document.getElementById('pdf-input').addEventListener('change', (e) => { if (e.target.files[0]) handlePdfOrImageFile(e.target.files[0]); });
+        document.getElementById('camera-input').addEventListener('change', (e) => { if (e.target.files[0]) handlePdfOrImageFile(e.target.files[0]); });
+
+        // 업로드 박스 및 버튼 클릭·드래그앤드롭 이벤트 연결
+        document.getElementById('btn-select-pdf').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('pdf-input').click();
         });
-        document.getElementById('camera-input').addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handlePdfOrImageFile(e.target.files[0]);
+        document.getElementById('btn-camera-capture').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('camera-input').click();
+        });
+        document.getElementById('pdf-upload-box').addEventListener('click', (e) => {
+            if (e.target.closest('#btn-select-pdf') || e.target.closest('#btn-camera-capture')) return;
+            document.getElementById('pdf-input').click();
+        });
+        document.getElementById('ppt-upload-box').addEventListener('click', () => {
+            document.getElementById('ppt-input').click();
         });
 
-        async function extractTextFromPPTX(file) {
-            const zip = new JSZip();
-            const contents = await zip.loadAsync(file);
-            let fullText = "";
-
-            const slideFiles = Object.keys(contents.files)
-                .filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
-                .sort((a, b) => {
-                    const numA = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
-                    const numB = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
-                    return numA - numB;
-                });
-
-            for (let idx = 0; idx < slideFiles.length; idx++) {
-                const slidePath = slideFiles[idx];
-                const xmlString = await contents.file(slidePath).async("string");
-                const textMatches = xmlString.match(/<a:t>.*?<\/a:t>/g);
-                if (textMatches) {
-                    const slideText = textMatches
-                        .map(match => match.replace(/<a:t>/g, "").replace(/<\/a:t>/g, "").trim())
-                        .filter(Boolean)
-                        .join(" ");
-                    if (slideText) fullText += `[슬라이드 ${idx + 1}] ${slideText}\n`;
+        ['pdf-upload-box', 'ppt-upload-box'].forEach(boxId => {
+            const box = document.getElementById(boxId);
+            box.addEventListener('dragover', (e) => { e.preventDefault(); box.classList.add('dropzone-active'); });
+            box.addEventListener('dragleave', () => box.classList.remove('dropzone-active'));
+            box.addEventListener('drop', (e) => {
+                e.preventDefault();
+                box.classList.remove('dropzone-active');
+                const file = e.dataTransfer?.files?.[0];
+                if (!file) return;
+                if (boxId === 'ppt-upload-box' || file.name.toLowerCase().endsWith('.pptx')) {
+                    switchTab('ppt');
+                    handlePptFile(file);
+                } else {
+                    handlePdfOrImageFile(file);
                 }
-            }
-            return fullText.trim();
-        }
+            });
+        });
 
-        function cleanTopicName(rawFileName) {
-            return rawFileName
-                .replace(/\.(pptx?|pdf|hwpx?|jpe?g|png|webp)$/i, "")
-                .replace(/_/g, " ")
+        // 자막 스튜디오 컨트롤 이벤트 연결 (글자 크기, 색상, 외곽선 모드, 새 자막 추가)
+        document.getElementById('pdf-font-scale').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10) || 100;
+            pdfSubtitleStyle.scale = val / 100;
+            document.getElementById('pdf-font-scale-label').textContent = `${val}%`;
+            renderPdfStudio();
+        });
+
+        document.querySelectorAll('.pdf-color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                pdfSubtitleStyle.color = btn.dataset.color || '#1d4ed8';
+                document.querySelectorAll('.pdf-color-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-600'));
+                btn.classList.add('ring-2', 'ring-offset-2', 'ring-blue-600');
+                renderPdfStudio();
+            });
+        });
+
+        document.getElementById('pdf-bg-style').addEventListener('change', (e) => {
+            pdfSubtitleStyle.bgMode = e.target.value || 'halo';
+            renderPdfStudio();
+        });
+
+        document.getElementById('add-pdf-subtitle-btn').addEventListener('click', () => {
+            if (!pdfPagesModel || pdfPagesModel.length === 0) return;
+            const targetLang = getSelectedTargetLanguage();
+            const firstPage = pdfPagesModel[0];
+            firstPage.blocks.push({
+                id: `custom-sub-${Date.now()}`,
+                koText: '사용자 추가 자막',
+                transText: `[${targetLang} 새 자막] 여기를 클릭해 내용을 입력하고 원하는 위치로 끌어 옮기세요.`,
+                xRatio: 0.12,
+                yRatio: 0.12,
+                wRatio: 0.72,
+                fontRatio: 0.013
+            });
+            renderPdfStudio();
+            showToast('1쪽에 새 자막 상자가 추가되었습니다.', 'info');
+        });
+
+        // 파일명에서 깔끔한 수업 주제명 추출
+        function cleanTopicName(rawTitle) {
+            if (!rawTitle) return "오늘의 핵심 배움 정리";
+            let t = rawTitle
+                .replace(/\.(pptx|ppt|pdf|hwp|hwpx)$/i, "")
+                .replace(/[_-]+/g, " ")
+                .replace(/\b(PPT수업|수업용|교사용|학습지|요약학습지|초등|\d+-\d+-\d+|\d+_\d+)\b/gi, " ")
                 .replace(/\s+/g, " ")
                 .trim();
+            return t.length >= 2 ? t : rawTitle.replace(/\.\w+$/, "");
         }
 
-        // 외부 웹사이트 배포 시 API 키가 없어도 PPT/텍스트를 2~3쪽 이중언어 학습지로 구성해주는 지능형 요약·번역 폴백 엔진
-        async function buildWorksheetWithNeuralFallback(text, targetLang, rawTitle) {
-            const cleanTitleKo = cleanTopicName(rawTitle || "오늘의 핵심 배움 학습지")
-                .replace(/^[0-9\-_]+/, "")
-                .trim() || "오늘의 핵심 배움 학습지";
-
-            const rawLines = text
-                .replace(/\[슬라이드\s*\d+\]/g, "\n")
-                .split(/[\r\n]+|(?<=[\.!\?다요죠함음])\s+/)
+        // 무인증(Fallback) 환경에서도 실제 PPT·지문 본문을 분석하여 초등 맞춤형 학습지로 구조화하는 스마트 엔진
+        async function buildSmartDynamicWorksheetFallback(rawText, targetLang, cleanTitle) {
+            const rawLines = (rawText || "")
+                .split(/[\n\r]+|(?<=[.?!다요])\s+/)
                 .map(s => s.replace(/\s+/g, " ").trim())
-                .filter(s => s.length >= 8 && /[가-힣]/.test(s));
+                .filter(s => s.length >= 10 && s.length <= 130 && /[가-힣]{3,}/.test(s))
+                .filter(s => !/^(목차|차례|출처|저작권|참고\s*자료|교과서\s*\d+쪽|준비물|활동\s*\d+)$/i.test(s));
 
             const uniqueSentences = [];
-            for (const s of rawLines) {
-                if (!uniqueSentences.some(prev => prev.includes(s) || s.includes(prev))) {
-                    uniqueSentences.push(s);
+            for (const line of rawLines) {
+                if (!uniqueSentences.some(existing => existing.includes(line) || line.includes(existing))) {
+                    // 초등학생 친화적인 해요체로 자연스럽게 정돈
+                    let polite = line;
+                    if (!/(해요|예요|어요|아요|니다|까요|세요)[.?!]?$/.test(polite)) {
+                        polite = polite.replace(/[.]+$/, '') + '에 대해 함께 알아보아요.';
+                    }
+                    uniqueSentences.push(polite);
                 }
+                if (uniqueSentences.length >= 14) break;
             }
 
+            // 추출된 문장이 부족할 경우 제목 기반 보충
             while (uniqueSentences.length < 8) {
                 const idx = uniqueSentences.length + 1;
-                uniqueSentences.push(`${cleanTitleKo}의 핵심 개념과 중요한 표현(${idx})을 차근차근 읽으며 함께 익혀 보아요.`);
+                if (idx === 1) uniqueSentences.push(`${cleanTitle}의 핵심 개념과 의미를 정확하게 이해해 보아요.`);
+                else if (idx === 2) uniqueSentences.push(`수업 시간에 배운 주요 용어와 예시를 친구들과 함께 살펴보아요.`);
+                else if (idx === 3) uniqueSentences.push(`실생활에서 ${cleanTitle}와 관련된 다양한 상황을 찾아 이야기해 보아요.`);
+                else if (idx === 4) uniqueSentences.push(`중요한 내용을 스스로 정리하며 오늘 배운 원리를 익혀 보아요.`);
+                else uniqueSentences.push(`배운 내용을 바탕으로 문제를 해결하고 실생활에 알맞게 적용해 보아요.`);
             }
 
-            const selectedKoSentences = uniqueSentences.slice(0, 8);
-            const goalKo = `${cleanTitleKo}의 핵심 내용을 이해하고 상황에 맞게 올바르게 활용할 수 있어요.`;
+            const selected8 = uniqueSentences.slice(0, 8);
+            const goalKo = `${cleanTitle}의 핵심 내용을 이해하고 상황에 알맞게 활용해 보아요.`;
 
-            // 핵심 어휘 4개 추출
-            const wordCandidates = (text.match(/[가-힣]{2,6}/g) || [])
-                .filter(w => !/^(슬라이드|우리가|그리고|하지만|따라서|있어요|합니다|입니다|해보세요|알아봅시다)$/.test(w));
+            // 본문에서 자주 등장하는 핵심 어휘 후보 자동 추출
+            const wordMatches = (rawText || "").match(/[가-힣]{2,6}(?=[은는이가을를의에(])/g) || [];
+            const stopWords = new Set(['우리는', '오늘은', '이것은', '그것은', '다음은', '무엇을', '어떻게', '알아보', '생각해', '이야기', '친구들', '선생님', '교과서']);
             const freqMap = new Map();
-            wordCandidates.forEach(w => freqMap.set(w, (freqMap.get(w) || 0) + 1));
-            const topWords = Array.from(freqMap.entries())
-                .sort((a, b) => b[1] - a[1])
-                .map(e => e[0])
-                .slice(0, 4);
-
-            while (topWords.length < 4) {
-                const defaults = ["핵심 개념", "중요 표현", "학습 활동", "실생활 활용"];
-                topWords.push(defaults[topWords.length]);
+            for (const w of wordMatches) {
+                if (!stopWords.has(w) && w.length >= 2) {
+                    freqMap.set(w, (freqMap.get(w) || 0) + 1);
+                }
             }
+            const sortedWords = Array.from(freqMap.entries()).sort((a, b) => b[1] - a[1]).map(e => e[0]);
+            const defaultWords = ['핵심 개념', '학습 목표', '실생활 예시', '정리하기'];
+            const pickedWords = [...sortedWords, ...defaultWords].slice(0, 4);
 
-            const vocabDescsKo = topWords.map((w, i) => {
-                const matchSent = selectedKoSentences.find(s => s.includes(w)) || selectedKoSentences[i % selectedKoSentences.length];
-                return matchSent.length > 70 ? matchSent.slice(0, 68) + "..." : matchSent;
-            });
+            const vocabKOs = pickedWords.map((w, i) => ({
+                wordKo: w,
+                descKo: selected8[i] ? selected8[i] : `${cleanTitle} 단원에서 꼭 알아야 하는 중요한 핵심 어휘예요.`
+            }));
 
-            const quizKoList = [
-                `1. 오늘 배운 '${cleanTitleKo}'의 핵심 내용을바르게 이해하고 설명할 수 있나요? ( O / X )`,
-                `2. ${selectedKoSentences[0].slice(0, 55)} ( O / X )`,
-                `3. 배운 내용을 일상생활이나 학교 수업 시간에 알맞게 활용할 수 있습니다. ( O / X )`
+            const quizKOs = [
+                { qKo: `1. ${selected8[0].replace(/해요\.?$/, '합니다.')} ( O / X )`, answerKo: 'O' },
+                { qKo: `2. ${selected8[1].replace(/해요\.?$/, '합니다.')} ( O / X )`, answerKo: 'O' },
+                { qKo: `3. 오늘 배운 ${cleanTitle} 내용은 우리 생활과 전혀 관련이 없습니다. ( O / X )`, answerKo: 'X' }
             ];
 
-            // 모든 텍스트 일괄 다국어 신경망 번역
-            const allToTranslate = [
-                cleanTitleKo,
+            // 신경망 번역 엔진으로 일괄 다국어 번역
+            const allKoToTranslate = [
+                cleanTitle,
                 goalKo,
-                ...selectedKoSentences,
-                ...topWords,
-                ...vocabDescsKo,
-                ...quizKoList
+                ...selected8,
+                ...vocabKOs.map(v => v.wordKo),
+                ...vocabKOs.map(v => v.descKo),
+                ...quizKOs.map(q => q.qKo)
             ];
+            const translatedAll = await translateBatchWithNeuralFallback(allKoToTranslate, targetLang);
 
-            const translatedAll = await translateBatchWithNeuralFallback(allToTranslate, targetLang);
             let cursor = 0;
-            const cleanTitleTrans = translatedAll[cursor++] || "";
+            const cleanTitleTrans = translatedAll[cursor++] || cleanTitle;
             const goalTrans = translatedAll[cursor++] || "";
-            const summaryTrans = selectedKoSentences.map(() => translatedAll[cursor++] || "");
-            const wordsTrans = topWords.map(() => translatedAll[cursor++] || "");
-            const descsTrans = vocabDescsKo.map(() => translatedAll[cursor++] || "");
-            const quizTrans = quizKoList.map(() => translatedAll[cursor++] || "");
+            const summaryItems = selected8.map(ko => ({ ko, trans: translatedAll[cursor++] || "" }));
+            const wordTransList = vocabKOs.map(() => translatedAll[cursor++] || "");
+            const descTransList = vocabKOs.map(() => translatedAll[cursor++] || "");
+            const vocabItems = vocabKOs.map((v, i) => ({
+                wordKo: v.wordKo,
+                wordTrans: wordTransList[i],
+                descKo: v.descKo,
+                descTrans: descTransList[i]
+            }));
+            const quizItems = quizKOs.map((q) => ({
+                qKo: q.qKo,
+                qTrans: translatedAll[cursor++] || "",
+                answerKo: q.answerKo,
+                answerTrans: q.answerKo
+            }));
 
-            return {
-                cleanTitleKo,
-                cleanTitleTrans,
-                goalKo,
-                goalTrans,
-                summaryItems: selectedKoSentences.map((ko, i) => ({
-                    ko,
-                    trans: summaryTrans[i] || ""
-                })),
-                vocabItems: topWords.map((w, i) => ({
-                    wordKo: w,
-                    wordTrans: wordsTrans[i] || "",
-                    descKo: vocabDescsKo[i],
-                    descTrans: descsTrans[i] || ""
-                })),
-                quizItems: quizKoList.map((qKo, i) => ({
-                    qKo,
-                    qTrans: quizTrans[i] || "",
-                    answerKo: "O",
-                    answerTrans: "O"
-                }))
-            };
+            return { cleanTitleKo: cleanTitle, cleanTitleTrans, goalKo, goalTrans, summaryItems, vocabItems, quizItems };
         }
 
+        // PPT 및 텍스트 요약 학습지 엔진 (실제 슬라이드 텍스트 기반 AI 재조직)
         async function summarizeTextsToWorksheet(text, targetLang, rawTitle) {
-            if (!text) return null;
-            const fallbackTitle = cleanTopicName(rawTitle || "오늘의 배움 학습지");
-            const prompt = `다음은 수업 자료 또는 안내문 텍스트입니다 (제목: ${fallbackTitle}):\n\n${text}\n\n당신은 다문화 학생들을 가르치는 친절한 선생님입니다.
-학생이 이 학습지만 읽어도 전체 흐름과 핵심 개념을 완벽히 이해할 수 있도록 2~3쪽 분량의 알찬 '오늘의 핵심 쏙쏙 학습지' 데이터를 만들어주세요.
+            const cleanTitle = cleanTopicName(rawTitle);
+            const trimmedSource = (text || "").replace(/\s+/g, " ").trim().slice(0, 6500);
+            const glossaryHint = EDU_GLOSSARY_HINTS[targetLang] || '';
 
-[작성 규칙]
-1. cleanTitleKo: 복잡한 파일명 코드나 기호를 빼고, 학생이 한눈에 알 수 있는 자연스러운 한국어 주제명
-2. cleanTitleTrans: 주제명의 자연스러운 ${targetLang} 번역
-3. goalKo / goalTrans: 오늘의 핵심 목표 또는 핵심 요약 1문장 (한국어 및 ${targetLang})
-4. summaryItems: 전체 내용을 흐름에 따라 가장 중요한 핵심 문장 8개로 체계적으로 정리하세요.
-   - 각 한국어 문장(ko)은 친절한 해요체("~해요", "~이에요")로 2줄 내외(60~95자)의 구체적이고 완성도 높은 문장으로 작성하세요.
-   - 각 번역 문장(trans)은 의미를 100% 정확하고 자연스럽게 전달하는 ${targetLang} 문장으로 작성하세요.
-5. vocabItems: 꼭 알아야 할 핵심 어휘 4개 (wordKo, wordTrans, descKo, descTrans)
-6. quizItems: 배운 내용을 스스로 점검할 수 있는 확인 문제 3개 (qKo, qTrans, answerKo, answerTrans)
+            const prompt = `당신은 다문화 초등학생을 위한 이중언어 교육 전문가입니다.
+아래 수업 자료(제목: "${cleanTitle}")의 본문 내용을 분석하여 초등학생 눈높이에 맞춘 A4 2~3쪽 분량의 이중언어 요약 학습지 데이터를 생성하세요.
 
-결과는 반드시 아래 JSON 형식으로만 반환하세요:
+[수업 자료 원문]:
+"""
+${trimmedSource || cleanTitle}
+"""
+
+[작성 규칙]:
+1. "cleanTitleKo": 파일명의 불필요한 기호를 제거한 깔끔한 수업 주제명 (예: "${cleanTitle}")
+2. "cleanTitleTrans": 수업 주제명의 정확한 ${targetLang} 번역
+3. "goalKo": 오늘의 핵심 학습 목표 한 문장 (친절한 '~해요' 체)
+4. "goalTrans": 학습 목표의 ${targetLang} 번역
+5. "summaryItems": 수업 자료의 핵심 내용을 초등학생이 이해하기 쉽게 정리한 8개의 문장 배열.
+   - 각 항목의 "ko"는 반드시 1~2문장 분량의 친절한 해요체('~해요', '~예요')로 작성하세요.
+   - 각 항목의 "trans"는 해당 한국어 문장의 자연스럽고 정확한 ${targetLang} 번역입니다. ${glossaryHint}
+6. "vocabItems": 수업 자료에서 가장 중요한 핵심 어휘 4개 배열 (wordKo, wordTrans, descKo, descTrans).
+7. "quizItems": 수업 내용을 확인하는 O/X 퀴즈 3문항 배열 (qKo, qTrans, answerKo, answerTrans).
+
+반드시 아래 JSON 형식으로만 응답하세요:
 {
-  "cleanTitleKo": "깔끔한 한국어 수업 주제",
-  "cleanTitleTrans": "${targetLang} 수업 주제",
-  "goalKo": "오늘의 학습 목표 한국어 문장",
-  "goalTrans": "오늘의 학습 목표 ${targetLang} 번역",
+  "cleanTitleKo": "수업 주제",
+  "cleanTitleTrans": "Translated Title",
+  "goalKo": "오늘의 핵심 한마디",
+  "goalTrans": "Translated Goal",
   "summaryItems": [
-    {"ko": "핵심 요약 문장 1", "trans": "${targetLang} 번역 1"},
-    {"ko": "핵심 요약 문장 2", "trans": "${targetLang} 번역 2"},
-    {"ko": "핵심 요약 문장 3", "trans": "${targetLang} 번역 3"},
-    {"ko": "핵심 요약 문장 4", "trans": "${targetLang} 번역 4"},
-    {"ko": "핵심 요약 문장 5", "trans": "${targetLang} 번역 5"},
-    {"ko": "핵심 요약 문장 6", "trans": "${targetLang} 번역 6"},
-    {"ko": "핵심 요약 문장 7", "trans": "${targetLang} 번역 7"},
-    {"ko": "핵심 요약 문장 8", "trans": "${targetLang} 번역 8"}
+    {"ko": "핵심 문장 1", "trans": "번역 1"},
+    {"ko": "핵심 문장 2", "trans": "번역 2"},
+    {"ko": "핵심 문장 3", "trans": "번역 3"},
+    {"ko": "핵심 문장 4", "trans": "번역 4"},
+    {"ko": "핵심 문장 5", "trans": "번역 5"},
+    {"ko": "핵심 문장 6", "trans": "번역 6"},
+    {"ko": "핵심 문장 7", "trans": "번역 7"},
+    {"ko": "핵심 문장 8", "trans": "번역 8"}
   ],
   "vocabItems": [
-    {"wordKo": "핵심어휘1", "wordTrans": "번역어휘1", "descKo": "쉬운 한국어 뜻풀이", "descTrans": "${targetLang} 뜻풀이"}
+    {"wordKo": "어휘1", "wordTrans": "번역1", "descKo": "쉬운 뜻 설명", "descTrans": "뜻 번역"},
+    {"wordKo": "어휘2", "wordTrans": "번역2", "descKo": "쉬운 뜻 설명", "descTrans": "뜻 번역"},
+    {"wordKo": "어휘3", "wordTrans": "번역3", "descKo": "쉬운 뜻 설명", "descTrans": "뜻 번역"},
+    {"wordKo": "어휘4", "wordTrans": "번역4", "descKo": "쉬운 뜻 설명", "descTrans": "뜻 번역"}
   ],
   "quizItems": [
-    {"qKo": "1. 확인 문제 한국어 질문 (O / X)", "qTrans": "${targetLang} 질문 번역", "answerKo": "O", "answerTrans": "O"}
+    {"qKo": "1. 확인 문제 1 ( O / X )", "qTrans": "문제 1 번역 ( O / X )", "answerKo": "O", "answerTrans": "O"},
+    {"qKo": "2. 확인 문제 2 ( O / X )", "qTrans": "문제 2 번역 ( O / X )", "answerKo": "O", "answerTrans": "O"},
+    {"qKo": "3. 확인 문제 3 ( O / X )", "qTrans": "문제 3 번역 ( O / X )", "answerKo": "X", "answerTrans": "X"}
   ]
 }`;
 
-            try {
-                const geminiResult = await callGeminiAPI(prompt, "object");
-                if (geminiResult && Array.isArray(geminiResult.summaryItems) && geminiResult.summaryItems.length > 0) {
-                    return geminiResult;
-                }
-            } catch (err) {
-                log(`[자체 학습지 생성 엔진 가동] 외부 웹사이트 무설치 요약·번역 모드로 학습지를 조판합니다.`);
+            const res = await callGeminiAPI(prompt, "object");
+            if (res && Array.isArray(res.summaryItems) && res.summaryItems.length >= 4) {
+                return res;
             }
-            return await buildWorksheetWithNeuralFallback(text, targetLang, rawTitle);
+
+            return await buildSmartDynamicWorksheetFallback(trimmedSource, targetLang, cleanTitle);
         }
 
-        function createWorksheetHeaderHTML(data, pageNum, totalPages) {
-            const titleKo = data.cleanTitleKo || cleanTopicName(originalFileName);
-            const titleTrans = data.cleanTitleTrans || "";
-            if (pageNum === 1) {
-                return `
-                    <div style="border-bottom: 3px solid #111827; padding-bottom: 16px; margin-bottom: 34px;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
-                            <div style="flex: 1; min-width: 0;">
-                                <h1 contenteditable="true" style="font-size: 2.15rem; color: #111827; margin: 0; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2;">오늘의 핵심 쏙쏙 학습지</h1>
-                                <p contenteditable="true" style="font-size: 1.05rem; color: #374151; margin: 12px 0 0 0; font-weight: 700; line-height: 1.45; word-break: keep-all;">
-                                    수업 주제: ${titleKo}
-                                </p>
-                                ${titleTrans ? `<p contenteditable="true" style="font-size: 0.92rem; color: #6b7280; margin: 4px 0 0 0; font-weight: 500; line-height: 1.35;">(${titleTrans})</p>` : ''}
-                            </div>
-                            <div style="flex-shrink: 0; text-align: right; padding-top: 6px;">
-                                <div style="font-size: 1.15rem; font-weight: 700; color: #111827; white-space: nowrap;">
-                                    이름: <span style="display: inline-block; width: 125px; border-bottom: 2px solid #94a3b8; margin-left: 4px;"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            return `
-                <div style="border-bottom: 2px solid #cbd5e1; padding-bottom: 12px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
-                    <div contenteditable="true" style="font-size: 1.05rem; font-weight: 800; color: #334155;">
-                        오늘의 핵심 쏙쏙 학습지 <span style="font-weight: 600; color: #64748b; margin-left: 8px;">| ${titleKo}</span>
-                    </div>
-                    <div style="font-size: 0.9rem; font-weight: 700; color: #64748b;">
-                        ${pageNum} / ${totalPages}쪽
-                    </div>
-                </div>
-            `;
-        }
-
-        function createWorksheetFooterHTML(pageNum, totalPages, isLastPage) {
-            return `
-                <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; color: #94a3b8; font-size: 0.92rem; font-weight: 600;">
-                    <span>${isLastPage ? '- 선생님이 만든 특별한 이중언어 학습지 -' : '다음 쪽에 계속됩니다 →'}</span>
-                    <span>${pageNum} / ${totalPages}</span>
-                </div>
-            `;
-        }
-
-        function createSummaryItemHTML(item, number) {
-            return `
-                <div class="worksheet-item">
-                    <div class="item-num">${number}</div>
-                    <div style="flex: 1; min-width: 0;">
-                        <div class="item-ko" contenteditable="true">${item.ko}</div>
-                        <div class="item-trans" contenteditable="true">${item.trans}</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function wrapSheetInResponsiveSlot(sheetEl) {
-            const slot = document.createElement('div');
-            slot.className = 'a4-scale-slot';
-            slot.appendChild(sheetEl);
-            return slot;
-        }
-
-        function renderWorksheetPages(data, styleMode) {
-            const container = document.getElementById('worksheet-pages-container');
-            container.innerHTML = '';
-
-            const summaryItems = Array.isArray(data) ? data : (data.summaryItems || []);
-            const vocabItems = (!Array.isArray(data) && data.vocabItems) ? data.vocabItems : [];
-            const quizItems = (!Array.isArray(data) && data.quizItems) ? data.quizItems : [];
-
-            if (styleMode === 'classic') {
-                const itemsPerPage = 4;
-                const chunks = [];
-                for (let i = 0; i < summaryItems.length; i += itemsPerPage) {
-                    chunks.push(summaryItems.slice(i, i + itemsPerPage));
-                }
-                if (chunks.length === 0) chunks.push([]);
-
-                const totalPages = chunks.length;
-                chunks.forEach((chunk, pageIdx) => {
-                    const pageNum = pageIdx + 1;
-                    const isLastPage = pageNum === totalPages;
-                    const sheet = document.createElement('div');
-                    sheet.className = 'a4-sheet';
-
-                    const itemsHTML = chunk
-                        .map((item, idx) => createSummaryItemHTML(item, pageIdx * itemsPerPage + idx + 1))
-                        .join('');
-
-                    sheet.innerHTML = `
-                        <div>
-                            ${createWorksheetHeaderHTML(data, pageNum, totalPages)}
-                            <div>${itemsHTML}</div>
-                        </div>
-                        ${createWorksheetFooterHTML(pageNum, totalPages, isLastPage)}
-                    `;
-                    container.appendChild(wrapSheetInResponsiveSlot(sheet));
+        // PPTX 슬라이드 번호순 정렬 및 문단별 텍스트 정밀 추출
+        async function extractTextFromPPTX(file) {
+            const zip = new JSZip();
+            const contents = await zip.loadAsync(file);
+            const slideNames = Object.keys(contents.files)
+                .filter(n => /^ppt\/slides\/slide\d+\.xml$/i.test(n))
+                .sort((a, b) => {
+                    const numA = parseInt(a.match(/slide(\d+)\.xml/i)?.[1] || "0", 10);
+                    const numB = parseInt(b.match(/slide(\d+)\.xml/i)?.[1] || "0", 10);
+                    return numA - numB;
                 });
-            } else {
-                const page1Items = summaryItems.slice(0, 3);
-                const page2Items = summaryItems.slice(3, 8);
-                const totalPages = 3;
 
-                const sheet1 = document.createElement('div');
-                sheet1.className = 'a4-sheet';
-                const vocabHTML = vocabItems.slice(0, 4).map(v => `
-                    <div class="ws-vocab-card">
-                        <div contenteditable="true" style="font-size: 1.05rem; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">
-                            • ${v.wordKo} <span style="font-weight: 600; color: #3b82f6; font-size: 0.95rem;">(${v.wordTrans})</span>
-                        </div>
-                        <div contenteditable="true" style="font-size: 0.92rem; color: #1f2937; font-weight: 600; line-height: 1.4;">${v.descKo}</div>
-                        <div contenteditable="true" style="font-size: 0.84rem; color: #6b7280; margin-top: 2px; line-height: 1.35;">${v.descTrans}</div>
-                    </div>
-                `).join('');
+            const parser = new DOMParser();
+            const slideTexts = [];
 
-                sheet1.innerHTML = `
-                    <div>
-                        ${createWorksheetHeaderHTML(data, 1, totalPages)}
-                        ${vocabItems.length > 0 ? `
-                            <div class="ws-section-title">📖 꼭 알아야 할 핵심 어휘</div>
-                            <div class="ws-vocab-grid">${vocabHTML}</div>
-                        ` : ''}
-                        <div class="ws-section-title">✏️ 오늘의 핵심 내용 쏙쏙 (1)</div>
-                        <div>${page1Items.map((item, idx) => createSummaryItemHTML(item, idx + 1)).join('')}</div>
-                    </div>
-                    ${createWorksheetFooterHTML(1, totalPages, false)}
-                `;
-                container.appendChild(wrapSheetInResponsiveSlot(sheet1));
-
-                const sheet2 = document.createElement('div');
-                sheet2.className = 'a4-sheet';
-                sheet2.innerHTML = `
-                    <div>
-                        ${createWorksheetHeaderHTML(data, 2, totalPages)}
-                        <div class="ws-section-title">✏️ 오늘의 핵심 내용 쏙쏙 (2)</div>
-                        <div>${page2Items.map((item, idx) => createSummaryItemHTML(item, idx + 4)).join('')}</div>
-                    </div>
-                    ${createWorksheetFooterHTML(2, totalPages, false)}
-                `;
-                container.appendChild(wrapSheetInResponsiveSlot(sheet2));
-
-                const sheet3 = document.createElement('div');
-                sheet3.className = 'a4-sheet';
-                const quizHTML = quizItems.map(q => `
-                    <div class="ws-quiz-box">
-                        <div contenteditable="true" style="font-size: 1.15rem; font-weight: 700; color: #111827; margin-bottom: 6px; line-height: 1.45;">${q.qKo}</div>
-                        <div contenteditable="true" style="font-size: 1.0rem; color: #4b5563; font-weight: 500; margin-bottom: 12px; line-height: 1.4;">${q.qTrans}</div>
-                        <div style="display: flex; justify-content: flex-end;">
-                            <div style="border: 2px dashed #94a3b8; border-radius: 10px; padding: 6px 24px; font-weight: 700; color: #64748b; font-size: 0.95rem;">
-                                답 (Answer): &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-
-                const answerKeyText = quizItems.map((q, i) => `${i + 1}번: ${q.answerKo}`).join('  |  ');
-
-                sheet3.innerHTML = `
-                    <div>
-                        ${createWorksheetHeaderHTML(data, 3, totalPages)}
-                        ${data.goalKo ? `
-                            <div class="ws-section-title">🎯 오늘의 핵심 한마디</div>
-                            <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 16px 20px; border-radius: 8px; margin-bottom: 28px;">
-                                <div contenteditable="true" style="font-size: 1.2rem; font-weight: 700; color: #111827; margin-bottom: 6px;">${data.goalKo}</div>
-                                <div contenteditable="true" style="font-size: 1.05rem; color: #4b5563; font-weight: 500;">${data.goalTrans || ''}</div>
-                            </div>
-                        ` : ''}
-                        <div class="ws-section-title">✅ 배운 내용을 스스로 확인해요!</div>
-                        <div>${quizHTML}</div>
-                        ${answerKeyText ? `
-                            <div style="margin-top: 24px; text-align: right; font-size: 0.85rem; color: #94a3b8; font-weight: 600;" contenteditable="true">
-                                [정답 확인] ${answerKeyText}
-                            </div>
-                        ` : ''}
-                    </div>
-                    ${createWorksheetFooterHTML(3, totalPages, true)}
-                `;
-                container.appendChild(wrapSheetInResponsiveSlot(sheet3));
+            for (const name of slideNames) {
+                const xml = await contents.files[name].async("string");
+                const doc = parser.parseFromString(xml, "text/xml");
+                const pNodes = doc.getElementsByTagName("a:p");
+                const lines = [];
+                for (const p of pNodes) {
+                    const tNodes = p.getElementsByTagName("a:t");
+                    let line = "";
+                    for (const t of tNodes) {
+                        if (t.textContent) line += t.textContent;
+                    }
+                    if (line.trim()) lines.push(line.trim());
+                }
+                if (lines.length > 0) {
+                    slideTexts.push(lines.join("\n"));
+                }
             }
-
-            currentZoomMode = 'fit';
-            setTimeout(applyResponsivePreviewScale, 60);
+            return slideTexts.join("\n\n");
         }
-
-        document.getElementById('style-btn-classic').addEventListener('click', () => {
-            if (!pptWorksheetData) return;
-            currentWorksheetStyle = 'classic';
-            document.getElementById('style-btn-classic').classList.add('active');
-            document.getElementById('style-btn-workbook').classList.remove('active');
-            renderWorksheetPages(pptWorksheetData, 'classic');
-        });
-
-        document.getElementById('style-btn-workbook').addEventListener('click', () => {
-            if (!pptWorksheetData) return;
-            currentWorksheetStyle = 'workbook';
-            document.getElementById('style-btn-workbook').classList.add('active');
-            document.getElementById('style-btn-classic').classList.remove('active');
-            renderWorksheetPages(pptWorksheetData, 'workbook');
-        });
 
         async function handlePptFile(file) {
             if (!file) return;
@@ -2603,70 +1980,61 @@ ${contextGuide}
             document.getElementById('header-reset-btn').classList.remove('hidden');
 
             try {
-                log(`[PPT 모드] 파일 분석 중... (${file.name})`);
-                updateProgress(15, "PPT 슬라이드 텍스트 추출 중...");
-                const extractedText = await extractTextFromPPTX(file);
-                if (!extractedText) throw new Error("PPT에서 텍스트를 찾을 수 없습니다.");
+                updateProgress(20, "PPT 슬라이드 문단 및 핵심 텍스트 추출 중...");
+                const fullText = await extractTextFromPPTX(file);
+                log(`PPT 텍스트 추출 완료 (${fullText.length}자)`);
 
-                updateProgress(45, `AI가 2~3쪽 분량으로 핵심 요약 및 ${targetLang} 번역 중...`);
-                const summaryData = await summarizeTextsToWorksheet(extractedText, targetLang, originalFileName);
-                if (!summaryData || !summaryData.summaryItems) throw new Error("AI 요약 결과를 생성하지 못했습니다.");
-
-                pptWorksheetData = summaryData;
-                currentWorksheetStyle = 'classic';
-                document.getElementById('style-btn-classic').classList.add('active');
-                document.getElementById('style-btn-workbook').classList.remove('active');
-
-                updateProgress(90, "A4 이중언어 학습지 조판 중...");
+                updateProgress(60, `${targetLang} 이중언어 학습지로 핵심 요약 및 조판 중...`);
+                pptWorksheetData = await summarizeTextsToWorksheet(fullText, targetLang, file.name);
                 renderWorksheetPages(pptWorksheetData, currentWorksheetStyle);
 
                 updateProgress(100, "완료!");
                 setTimeout(() => {
                     document.getElementById('status-section').classList.add('hidden');
                     document.getElementById('success-title').textContent = `${targetLang} 요약 학습지 완성!`;
-                    document.getElementById('success-desc').textContent = "문구를 탭해 직접 수정하거나, 인쇄용 PDF 및 메신저 공유용 이미지로 저장하세요.";
                     document.getElementById('ppt-preview-controls').classList.remove('hidden');
                     document.getElementById('worksheet-preview-wrapper').classList.remove('hidden');
                     document.getElementById('success-section').classList.remove('hidden');
                     applyResponsivePreviewScale();
-                }, 300);
-            } catch (error) {
-                console.error(error);
-                log(`에러 발생: ${error.message}`);
-                showToast(`오류: ${error.message}`, 'error');
-                setTimeout(() => resetWorkspaceToHome(), 2200);
+                }, 200);
+            } catch (err) {
+                console.error(err);
+                showToast(`오류: ${err.message}`, 'error');
+                resetWorkspaceToHome();
             }
         }
 
-        document.getElementById('ppt-input').addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handlePptFile(e.target.files[0]);
-        });
+        document.getElementById('ppt-input').addEventListener('change', (e) => { if (e.target.files[0]) handlePptFile(e.target.files[0]); });
 
-        // 모드 3: 텍스트 직접 입력 예시 및 변환
+        // 탭 3: 알림장·지문 즉시 학습지 변환 및 예시 버튼 이벤트 연결
         document.getElementById('sample-lesson-btn').addEventListener('click', () => {
-            document.getElementById('direct-title-input').value = "표준어와 방언을 사용하는 상황 알아보기";
-            document.getElementById('direct-body-input').value = `표준어는 한 나라에서 모든 사람이 공통으로 쓰는 규범이 되는 말이에요. 반면에 방언(사투리)은 특정 지역에서 오랫동안 사용해 온 그 지역만의 고유한 말이에요.
-뉴스 방송이나 공식적인 발표처럼 여러 지역 사람들에게 정확한 정보를 전달해야 할 때는 표준어를 사용하는 것이 좋아요.
-가족이나 고향 친구들과 정겹게 이야기를 나눌 때는 방언을 사용하면 더욱 친밀하고 따뜻한 느낌을 줄 수 있어요.
-대화하는 상대방과 장소, 상황에 맞추어 표준어와 방언을 알맞게 선택하여 사용하는 태도가 중요해요.`;
+            document.getElementById('direct-title-input').value = '5학년 국어 - 표준어와 방언을 사용하는 상황 알아보기';
+            document.getElementById('direct-body-input').value =
+                '표준어는 한 나라에서 모든 사람이 공통으로 쓰는 규범이 되는 말이고, 방언(사투리)은 특정 지역에서 오랫동안 사용해 온 고유한 말입니다.\n' +
+                '뉴스나 공식적인 발표처럼 여러 지역 사람들에게 정보를 정확하게 전달해야 할 때는 모두가 이해할 수 있는 표준어를 사용해야 합니다.\n' +
+                '반면 가족이나 고향 친구와 대화할 때는 방언을 사용하면 훨씬 친근하고 정다운 느낌을 줄 수 있습니다.\n' +
+                '우리는 대화하는 상대방과 장소, 상황에 따라 표준어와 방언을 알맞게 골라서 사용해야 합니다.';
+            showToast('수업 핵심 정리 예시가 입력되었습니다.', 'info');
         });
 
         document.getElementById('sample-notice-btn').addEventListener('click', () => {
-            document.getElementById('direct-title-input').value = "가을 현장체험학습 안내 가정통신문";
-            document.getElementById('direct-body-input').value = `1. 일시: 10월 23일(금) 오전 8시 50분까지 교실로 등교합니다.
-2. 장소: 국립중앙과학관 및 생태공원
-3. 준비물: 점심 도시락, 물, 돗자리, 필기도구, 편안한 운동화와 복장
-4. 주의사항: 차량 이동 시 안전벨트를 반드시 착용하고, 친구들과 줄을 맞추어 안전하게 이동합니다. 멀미가 있는 학생은 미리 멀미약을 복용해 주세요.`;
+            document.getElementById('direct-title-input').value = '가을 현장체험학습 안내 가정통신문';
+            document.getElementById('direct-body-input').value =
+                '1. 일시: 10월 23일(금) 오전 8시 50분까지 교실로 등교합니다.\n' +
+                '2. 준비물: 점심 도시락, 마실 물, 개인 돗자리, 필기도구, 편안한 운동화와 복장을 준비해 주세요.\n' +
+                '3. 버스 이동 시 안전벨트를 반드시 착용하며, 멀미가 있는 학생은 등교 전에 미리 멀미약을 복용하도록 지도해 주시기 바랍니다.\n' +
+                '4. 당일 미세먼지나 우천 등 기상 악화 시 실내 체험관 관람으로 일정이 변경될 수 있습니다.';
+            showToast('학부모 알림장 예시가 입력되었습니다.', 'info');
         });
 
         document.getElementById('generate-direct-btn').addEventListener('click', async () => {
-            const title = document.getElementById('direct-title-input').value.trim() || "오늘의 배움 안내 학습지";
-            const body = document.getElementById('direct-body-input').value.trim();
-            if (!body) {
-                showToast("변환할 본문 텍스트를 입력해 주세요!", "error");
+            const titleVal = document.getElementById('direct-title-input').value.trim() || '오늘의 다국어 학습지·안내장';
+            const bodyVal = document.getElementById('direct-body-input').value.trim();
+            if (!bodyVal) {
+                showToast('변환할 본문 내용을 입력해 주세요.', 'error');
                 return;
             }
-            originalFileName = title;
+            originalFileName = titleVal;
             const targetLang = getSelectedTargetLanguage();
 
             document.getElementById('text-section').classList.add('hidden');
@@ -2676,170 +2044,74 @@ ${contextGuide}
             document.getElementById('header-reset-btn').classList.remove('hidden');
 
             try {
-                log(`[텍스트 직접 변환 모드] AI 구성 시작... (${title})`);
-                updateProgress(35, `입력된 내용을 분석하여 ${targetLang} 이중언어 학습지로 구성 중...`);
-                const summaryData = await summarizeTextsToWorksheet(body, targetLang, title);
-                if (!summaryData || !summaryData.summaryItems) throw new Error("AI 학습지 데이터를 생성하지 못했습니다.");
-
-                pptWorksheetData = summaryData;
-                currentWorksheetStyle = 'classic';
-                document.getElementById('style-btn-classic').classList.add('active');
-                document.getElementById('style-btn-workbook').classList.remove('active');
-
-                updateProgress(90, "A4 이중언어 학습지 조판 중...");
+                updateProgress(45, `${targetLang} 이중언어 학습지·안내장으로 구성 중...`);
+                pptWorksheetData = await summarizeTextsToWorksheet(bodyVal, targetLang, titleVal);
                 renderWorksheetPages(pptWorksheetData, currentWorksheetStyle);
 
-                updateProgress(100, "완료!");
+                updateProgress(100, '완료!');
                 setTimeout(() => {
                     document.getElementById('status-section').classList.add('hidden');
-                    document.getElementById('success-title').textContent = `${targetLang} 맞춤 학습지 완성!`;
-                    document.getElementById('success-desc').textContent = "문구를 탭해 직접 수정하거나, PDF 및 이미지로 저장·공유하세요.";
+                    document.getElementById('success-title').textContent = `${targetLang} 학습지·안내장 완성!`;
                     document.getElementById('ppt-preview-controls').classList.remove('hidden');
                     document.getElementById('worksheet-preview-wrapper').classList.remove('hidden');
                     document.getElementById('success-section').classList.remove('hidden');
                     applyResponsivePreviewScale();
-                }, 300);
+                }, 200);
             } catch (err) {
-                console.error(err);
                 showToast(`오류: ${err.message}`, 'error');
-                setTimeout(() => resetWorkspaceToHome(), 2200);
+                resetWorkspaceToHome();
             }
         });
-
-        async function callGeminiAPI(prompt, returnType = "array") {
-            return runWithConcurrencyLimit(async () => {
-                const apiKey = (userCustomApiKey || "").trim();
-                // 외부 웹사이트에서 개인 API 키를 입력한 경우 범용 정식 모델도 순차 시도하도록 구성
-                const candidateModels = apiKey
-                    ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3-flash-preview']
-                    : ['gemini-3-flash-preview'];
-
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-
-                let lastError = null;
-                for (const modelName of candidateModels) {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-                    let retries = 2;
-                    let delay = 900;
-
-                    while (retries > 0) {
-                        try {
-                            const response = await fetch(url, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-                            const result = await response.json();
-                            if (result.error) {
-                                const msg = result.error.message || "API Error";
-                                // 외부 웹사이트에서 API 키가 없을 때 발생하는 에러는 즉시 폴백 엔진으로 넘김
-                                if (response.status === 400 || response.status === 403 || /unregistered callers|API key/i.test(msg)) {
-                                    throw new Error("AUTH_FALLBACK:" + msg);
-                                }
-                                throw new Error(msg);
-                            }
-                            if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
-                                const jsonStr = cleanJSONString(result.candidates[0].content.parts[0].text);
-                                return JSON.parse(jsonStr);
-                            }
-                            throw new Error("응답 형식 오류");
-                        } catch (error) {
-                            lastError = error;
-                            if (String(error.message).startsWith("AUTH_FALLBACK:")) {
-                                break;
-                            }
-                            retries--;
-                            if (retries > 0) {
-                                const jitter = Math.floor(Math.random() * 350);
-                                await new Promise(resolve => setTimeout(resolve, delay + jitter));
-                                delay *= 2;
-                            }
-                        }
-                    }
-                }
-                throw lastError || new Error("AI API 호출 실패");
-            });
-        }
-
-        async function callGeminiVisionAPI(prompt, base64Jpeg) {
-            return runWithConcurrencyLimit(async () => {
-                const apiKey = (userCustomApiKey || "").trim();
-                const candidateModels = apiKey
-                    ? ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3-flash-preview']
-                    : ['gemini-3-flash-preview'];
-
-                const payload = {
-                    contents: [{
-                        role: "user",
-                        parts: [
-                            { text: prompt },
-                            { inlineData: { mimeType: "image/jpeg", data: base64Jpeg } }
-                        ]
-                    }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-
-                for (const modelName of candidateModels) {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        const result = await response.json();
-                        if (!result.error && result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
-                            return JSON.parse(cleanJSONString(result.candidates[0].content.parts[0].text));
-                        }
-                    } catch (err) {}
-                }
-                return [];
-            });
-        }
-
         function renderPageSubtitlesToTransparentCanvas(pageData, renderScale = 3.0) {
             const canvas = document.createElement('canvas');
             canvas.width = Math.round(pageData.pdfWidth * renderScale);
             canvas.height = Math.round(pageData.pdfHeight * renderScale);
             const ctx = canvas.getContext('2d');
-
             ctx.textBaseline = 'top';
-            const fontFamily = "'Pretendard', 'Noto Sans KR', 'Noto Sans', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans Devanagari', 'Noto Sans Thai', 'Noto Sans Arabic', sans-serif";
 
             for (const block of pageData.blocks) {
                 const text = (block.transText || "").trim();
                 if (!text) continue;
-
                 const x = block.xRatio * canvas.width;
                 const y = block.yRatio * canvas.height;
                 const maxW = block.wRatio * canvas.width;
-                const fontSize = Math.max(7.5 * renderScale, block.fontRatio * canvas.height * pdfSubtitleStyle.scale);
-                const lineHeight = fontSize * 1.24;
+                const fontSize = Math.max(8.5 * renderScale, block.fontRatio * canvas.height * pdfSubtitleStyle.scale);
+                const lineHeight = fontSize * 1.28;
 
-                ctx.font = `600 ${fontSize}px ${fontFamily}`;
-                const wrappedLines = wrapMultilingualText(ctx, text, maxW);
+                ctx.font = `700 ${fontSize}px "Noto Sans KR", "Noto Sans", sans-serif`;
+
+                // CJK(중국어·일본어) 및 공백 기반 다국어 줄바꿈 동시 지원
+                const tokens = text.includes(' ') ? text.split(/\s+/) : Array.from(text);
+                const joiner = text.includes(' ') ? ' ' : '';
+                const lines = [];
+                let curLine = tokens[0] || '';
+                for (let i = 1; i < tokens.length; i++) {
+                    const testLine = curLine + joiner + tokens[i];
+                    if (ctx.measureText(testLine).width <= maxW) {
+                        curLine = testLine;
+                    } else {
+                        lines.push(curLine);
+                        curLine = tokens[i];
+                    }
+                }
+                if (curLine) lines.push(curLine);
 
                 if (pdfSubtitleStyle.bgMode === 'box') {
-                    let maxLineW = 0;
-                    for (const l of wrappedLines) maxLineW = Math.max(maxLineW, ctx.measureText(l).width);
-                    const padX = 4 * renderScale;
-                    const padY = 2 * renderScale;
-                    const boxH = wrappedLines.length * lineHeight + padY * 2;
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.90)';
-                    ctx.fillRect(x - padX, y - padY, Math.min(maxW + padX * 2, maxLineW + padX * 2), boxH);
+                    const boxPad = 4 * renderScale;
+                    const boxH = lines.length * lineHeight + boxPad * 1.5;
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+                    ctx.fillRect(x - boxPad, y - boxPad * 0.5, maxW + boxPad * 2, boxH);
+                    ctx.restore();
                 }
 
                 let curY = y;
-                for (const lineStr of wrappedLines) {
+                for (const lineStr of lines) {
                     if (pdfSubtitleStyle.bgMode === 'halo') {
                         ctx.save();
                         ctx.lineJoin = 'round';
-                        ctx.miterLimit = 2;
-                        ctx.lineWidth = Math.max(2.2, fontSize * 0.18);
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.96)';
+                        ctx.lineWidth = Math.max(3.2, fontSize * 0.22);
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.98)';
                         ctx.strokeText(lineStr, x, curY);
                         ctx.restore();
                     }
@@ -2851,86 +2123,305 @@ ${contextGuide}
             return canvas;
         }
 
-        function wrapMultilingualText(ctx, text, maxWidth) {
-            const rawParagraphs = text.split('\n');
-            const lines = [];
-            for (const para of rawParagraphs) {
-                const trimmed = para.trim();
-                if (!trimmed) continue;
-                const hasSpaces = trimmed.includes(' ');
-                const tokens = hasSpaces ? trimmed.split(/\s+/) : Array.from(trimmed);
-                const joiner = hasSpaces ? ' ' : '';
+        // A4 이중언어 요약 학습지 렌더링 (핵심 문장 집중형 2쪽 & 표준 워크북형 3쪽)
+        function renderWorksheetPages(data, styleMode = 'classic') {
+            if (!data) return;
+            const container = document.getElementById('worksheet-pages-container');
+            container.innerHTML = '';
 
-                let currentLine = tokens[0] || '';
-                for (let i = 1; i < tokens.length; i++) {
-                    const token = tokens[i];
-                    const testLine = currentLine + joiner + token;
-                    if (ctx.measureText(testLine).width <= maxWidth) {
-                        currentLine = testLine;
-                    } else {
-                        lines.push(currentLine);
-                        currentLine = token;
-                    }
+            const titleKo = data.cleanTitleKo || cleanTopicName(originalFileName);
+            const titleTrans = data.cleanTitleTrans || '';
+            const goalKo = data.goalKo || `${titleKo}의 핵심 내용을 이해하고 설명할 수 있어요.`;
+            const goalTrans = data.goalTrans || '';
+            const items = Array.isArray(data.summaryItems) ? data.summaryItems : [];
+            const vocabs = Array.isArray(data.vocabItems) ? data.vocabItems : [];
+            const quizzes = Array.isArray(data.quizItems) ? data.quizItems : [];
+
+            const makeEditableHeader = (pageIdx, totalPages) => `
+                <div class="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-start gap-4">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-2xl font-black text-slate-900 tracking-tight mb-1.5" contenteditable="true" spellcheck="false">오늘의 핵심 쏙쏙 학습지</div>
+                        <div class="text-sm font-bold text-slate-800 leading-snug" contenteditable="true" spellcheck="false">수업 주제: ${titleKo}</div>
+                        ${titleTrans ? `<div class="text-xs font-semibold text-blue-700 mt-0.5" contenteditable="true" spellcheck="false">(${titleTrans})</div>` : ''}
+                    </div>
+                    <div class="text-sm font-bold text-slate-800 whitespace-nowrap pt-1 flex-shrink-0">
+                        ${pageIdx === 1 ? '이름: <span class="inline-block w-24 border-b-2 border-slate-400 ml-1"></span>' : `<span class="text-xs text-slate-500 font-extrabold">${pageIdx} / ${totalPages}쪽</span>`}
+                    </div>
+                </div>
+            `;
+
+            const makeFooter = (pageIdx, totalPages) => `
+                <div class="pt-4 mt-6 border-t border-slate-200 flex justify-between items-center text-xs font-bold text-slate-400">
+                    <span>- 선생님이 만든 특별한 이중언어 학습지 -</span>
+                    <span>${pageIdx} / ${totalPages}</span>
+                </div>
+            `;
+
+            if (styleMode === 'classic') {
+                const chunks = [];
+                for (let i = 0; i < items.length; i += 4) {
+                    chunks.push(items.slice(i, i + 4));
                 }
-                if (currentLine) lines.push(currentLine);
-            }
-            return lines;
-        }
+                if (chunks.length === 0) chunks.push([]);
+                const totalPages = chunks.length;
 
-        async function captureA4SheetsUnscaled() {
-            const sheets = Array.from(document.querySelectorAll('#worksheet-pages-container .a4-sheet'));
-            const canvases = [];
-            for (const sheet of sheets) {
-                const prevTransform = sheet.style.transform;
-                sheet.style.transform = 'none';
-                const canvas = await html2canvas(sheet, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    width: 794,
-                    windowWidth: 1200
+                chunks.forEach((chunk, pIdx) => {
+                    const slot = document.createElement('div');
+                    slot.className = 'a4-scale-slot';
+                    const sheet = document.createElement('div');
+                    sheet.className = 'a4-sheet';
+
+                    const itemsHtml = chunk.map((item, idx) => {
+                        const globalNum = pIdx * 4 + idx + 1;
+                        return `
+                            <div class="worksheet-item">
+                                <div class="item-num">${globalNum}</div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="item-ko outline-none" contenteditable="true" spellcheck="false">${item.ko || ''}</div>
+                                    <div class="item-trans outline-none" contenteditable="true" spellcheck="false">${item.trans || ''}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    sheet.innerHTML = `
+                        <div>
+                            ${makeEditableHeader(pIdx + 1, totalPages)}
+                            <div class="mt-2">${itemsHtml}</div>
+                        </div>
+                        ${makeFooter(pIdx + 1, totalPages)}
+                    `;
+                    slot.appendChild(sheet);
+                    container.appendChild(slot);
                 });
-                sheet.style.transform = prevTransform;
-                canvases.push(canvas);
+            } else {
+                const totalPages = 3;
+                const firstHalf = items.slice(0, 4);
+                const secondHalf = items.slice(4, 8);
+
+                // 1쪽: 핵심 어휘 + 핵심 문장 1~3
+                const slot1 = document.createElement('div');
+                slot1.className = 'a4-scale-slot';
+                const sheet1 = document.createElement('div');
+                sheet1.className = 'a4-sheet';
+                sheet1.innerHTML = `
+                    <div>
+                        ${makeEditableHeader(1, totalPages)}
+                        <div class="ws-section-title">📖 꼭 알아야 할 핵심 어휘</div>
+                        <div class="ws-vocab-grid">
+                            ${vocabs.slice(0, 4).map(v => `
+                                <div class="ws-vocab-card">
+                                    <div class="text-sm font-extrabold text-blue-900 mb-1" contenteditable="true" spellcheck="false">• ${v.wordKo || ''} <span class="text-xs font-semibold text-blue-600">(${v.wordTrans || ''})</span></div>
+                                    <div class="text-xs font-bold text-slate-800 leading-snug" contenteditable="true" spellcheck="false">${v.descKo || ''}</div>
+                                    <div class="text-[11px] text-slate-500 leading-snug mt-0.5" contenteditable="true" spellcheck="false">${v.descTrans || ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="ws-section-title">✏️ 오늘의 핵심 내용 쏙쏙 (1)</div>
+                        <div>
+                            ${firstHalf.slice(0, 3).map((item, idx) => `
+                                <div class="worksheet-item !mb-5">
+                                    <div class="item-num">${idx + 1}</div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="item-ko !text-[1.18rem] outline-none" contenteditable="true" spellcheck="false">${item.ko || ''}</div>
+                                        <div class="item-trans !text-[1.02rem] outline-none" contenteditable="true" spellcheck="false">${item.trans || ''}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ${makeFooter(1, totalPages)}
+                `;
+                slot1.appendChild(sheet1);
+                container.appendChild(slot1);
+
+                // 2쪽: 나머지 핵심 문장
+                const remainItems = [...firstHalf.slice(3), ...secondHalf];
+                const slot2 = document.createElement('div');
+                slot2.className = 'a4-scale-slot';
+                const sheet2 = document.createElement('div');
+                sheet2.className = 'a4-sheet';
+                sheet2.innerHTML = `
+                    <div>
+                        ${makeEditableHeader(2, totalPages)}
+                        <div class="ws-section-title">✏️ 오늘의 핵심 내용 쏙쏙 (2)</div>
+                        <div>
+                            ${remainItems.map((item, idx) => `
+                                <div class="worksheet-item !mb-6">
+                                    <div class="item-num">${idx + 4}</div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="item-ko !text-[1.22rem] outline-none" contenteditable="true" spellcheck="false">${item.ko || ''}</div>
+                                        <div class="item-trans !text-[1.05rem] outline-none" contenteditable="true" spellcheck="false">${item.trans || ''}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ${makeFooter(2, totalPages)}
+                `;
+                slot2.appendChild(sheet2);
+                container.appendChild(slot2);
+
+                // 3쪽: 오늘의 학습 목표 + 확인 퀴즈
+                const slot3 = document.createElement('div');
+                slot3.className = 'a4-scale-slot';
+                const sheet3 = document.createElement('div');
+                sheet3.className = 'a4-sheet';
+                sheet3.innerHTML = `
+                    <div>
+                        ${makeEditableHeader(3, totalPages)}
+                        <div class="ws-section-title">🎯 오늘의 핵심 한마디</div>
+                        <div class="bg-blue-50/70 border-l-4 border-blue-600 p-4 rounded-r-xl mb-6">
+                            <div class="text-base font-extrabold text-slate-900 mb-1" contenteditable="true" spellcheck="false">${goalKo}</div>
+                            <div class="text-sm font-medium text-slate-600" contenteditable="true" spellcheck="false">${goalTrans}</div>
+                        </div>
+                        <div class="ws-section-title">✅ 배운 내용을 스스로 확인해요!</div>
+                        <div>
+                            ${quizzes.map((q) => `
+                                <div class="ws-quiz-box">
+                                    <div class="text-base font-bold text-slate-900 mb-1" contenteditable="true" spellcheck="false">${q.qKo || ''}</div>
+                                    <div class="text-sm text-slate-600 mb-3" contenteditable="true" spellcheck="false">${q.qTrans || ''}</div>
+                                    <div class="flex justify-end">
+                                        <span class="border border-dashed border-slate-400 rounded-lg px-4 py-1 text-xs font-bold text-slate-500">답 (Answer): &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="text-right text-xs font-bold text-slate-400 mt-3" contenteditable="true" spellcheck="false">
+                            [정답 확인] ${quizzes.map((q, i) => `${i + 1}번: ${q.answerKo || 'O'}`).join(' | ')}
+                        </div>
+                    </div>
+                    ${makeFooter(3, totalPages)}
+                `;
+                slot3.appendChild(sheet3);
+                container.appendChild(slot3);
             }
-            return canvases;
         }
 
+        // 학습지 양식 전환 버튼 이벤트
+        document.getElementById('style-btn-classic').addEventListener('click', () => {
+            currentWorksheetStyle = 'classic';
+            document.getElementById('style-btn-classic').classList.add('active');
+            document.getElementById('style-btn-workbook').classList.remove('active');
+            if (pptWorksheetData) {
+                renderWorksheetPages(pptWorksheetData, currentWorksheetStyle);
+                applyResponsivePreviewScale();
+            }
+        });
+
+        document.getElementById('style-btn-workbook').addEventListener('click', () => {
+            currentWorksheetStyle = 'workbook';
+            document.getElementById('style-btn-workbook').classList.add('active');
+            document.getElementById('style-btn-classic').classList.remove('active');
+            if (pptWorksheetData) {
+                renderWorksheetPages(pptWorksheetData, currentWorksheetStyle);
+                applyResponsivePreviewScale();
+            }
+        });
+
+        // 모바일·태블릿·PC 반응형 미리보기 스케일 조정
+        function applyResponsivePreviewScale() {
+            const zoomLabel = document.getElementById('zoom-level-text');
+            if (currentMode === 'pdf') {
+                const wrapper = document.getElementById('pdf-studio-wrapper');
+                if (!wrapper || wrapper.classList.contains('hidden')) return;
+                const availW = Math.max(280, wrapper.clientWidth - 24);
+                const pages = document.querySelectorAll('#pdf-studio-pages-container .pdf-studio-page');
+                let appliedScale = 1.0;
+                pages.forEach(pageEl => {
+                    const baseW = parseFloat(pageEl.style.width) || 794;
+                    const baseH = parseFloat(pageEl.style.height) || 1123;
+                    const scale = currentZoomMode === 'fit' ? Math.min(1.0, availW / baseW) : currentZoomMode;
+                    appliedScale = scale;
+                    pageEl.style.transform = `scale(${scale})`;
+                    pageEl.style.marginBottom = `${Math.round((baseH * scale) - baseH + 24)}px`;
+                });
+                if (zoomLabel) zoomLabel.textContent = `${Math.round(appliedScale * 100)}%`;
+            } else {
+                const wrapper = document.getElementById('worksheet-preview-wrapper');
+                if (!wrapper || wrapper.classList.contains('hidden')) return;
+                const availW = Math.max(280, wrapper.clientWidth - 24);
+                const baseW = 794;
+                const scale = currentZoomMode === 'fit' ? Math.min(1.0, availW / baseW) : currentZoomMode;
+                document.querySelectorAll('#worksheet-pages-container .a4-scale-slot').forEach(slot => {
+                    const sheet = slot.querySelector('.a4-sheet');
+                    if (!sheet) return;
+                    sheet.style.transform = `scale(${scale})`;
+                    slot.style.height = `${Math.ceil(sheet.offsetHeight * scale) + 8}px`;
+                });
+                if (zoomLabel) zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+            }
+        }
+
+        window.addEventListener('resize', applyResponsivePreviewScale);
+        document.getElementById('zoom-fit-btn').addEventListener('click', () => {
+            currentZoomMode = 'fit';
+            applyResponsivePreviewScale();
+        });
+        document.getElementById('zoom-out-btn').addEventListener('click', () => {
+            const cur = currentZoomMode === 'fit' ? 0.85 : currentZoomMode;
+            currentZoomMode = Math.max(0.45, Math.round((cur - 0.1) * 10) / 10);
+            applyResponsivePreviewScale();
+        });
+        document.getElementById('zoom-in-btn').addEventListener('click', () => {
+            const cur = currentZoomMode === 'fit' ? 0.85 : currentZoomMode;
+            currentZoomMode = Math.min(1.4, Math.round((cur + 0.1) * 10) / 10);
+            applyResponsivePreviewScale();
+        });
+
+        // 최종 인쇄용 PDF 파일 생성 (모드 1: 원본 벡터 보존 + 고해상도 자막 레이어 합성 / 모드 2·3: A4 시트 변환)
         async function buildFinalPdfBlob() {
             const targetLang = getSelectedTargetLanguage();
             const { PDFDocument } = PDFLib;
 
             if (currentMode === 'pdf' && rawPdfLibBuffer && pdfPagesModel.length > 0) {
                 const pdfDoc = await PDFDocument.load(rawPdfLibBuffer.slice(0));
-                const docPages = pdfDoc.getPages();
+                const pages = pdfDoc.getPages();
 
-                for (let i = 0; i < docPages.length; i++) {
+                for (let i = 0; i < pdfPagesModel.length; i++) {
                     const pageData = pdfPagesModel[i];
-                    if (!pageData || pageData.blocks.length === 0) continue;
-                    const pdfPage = docPages[i];
-                    const { width, height } = pdfPage.getSize();
+                    const pdfPage = pages[i];
+                    if (!pdfPage || !pageData.blocks || pageData.blocks.length === 0) continue;
 
                     const overlayCanvas = renderPageSubtitlesToTransparentCanvas(pageData, 3.0);
                     const pngDataUrl = overlayCanvas.toDataURL('image/png');
                     const pngImage = await pdfDoc.embedPng(pngDataUrl);
+                    const { width, height } = pdfPage.getSize();
                     pdfPage.drawImage(pngImage, { x: 0, y: 0, width, height });
                 }
-                const finalPdfBytes = await pdfDoc.save();
-                const fileName = cleanTopicName(originalFileName) + `_${targetLang}병기.pdf`;
-                return { blob: new Blob([finalPdfBytes], { type: "application/pdf" }), fileName };
+
+                const pdfBytes = await pdfDoc.save();
+                const cleanBase = originalFileName.replace(/\.\w+$/, '');
+                return {
+                    blob: new Blob([pdfBytes], { type: 'application/pdf' }),
+                    fileName: `${cleanBase}_${targetLang}_이중언어교재.pdf`
+                };
             } else {
-                const canvases = await captureA4SheetsUnscaled();
                 const pdfDoc = await PDFDocument.create();
-                for (const canvas of canvases) {
-                    const imgDataUrl = canvas.toDataURL('image/jpeg', 0.96);
-                    const jpgImage = await pdfDoc.embedJpg(imgDataUrl);
+                const sheets = Array.from(document.querySelectorAll('#worksheet-pages-container .a4-sheet'));
+
+                for (const sheet of sheets) {
+                    const prevTransform = sheet.style.transform;
+                    sheet.style.transform = 'none';
+                    const canvas = await html2canvas(sheet, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        width: 794
+                    });
+                    sheet.style.transform = prevTransform;
+
+                    const jpgImage = await pdfDoc.embedJpg(canvas.toDataURL('image/jpeg', 0.95));
                     const page = pdfDoc.addPage([595.28, 841.89]);
                     page.drawImage(jpgImage, { x: 0, y: 0, width: 595.28, height: 841.89 });
                 }
+
                 const pdfBytes = await pdfDoc.save();
-                const fileName = cleanTopicName(originalFileName) + `_${targetLang}_학습지.pdf`;
-                return { blob: new Blob([pdfBytes], { type: "application/pdf" }), fileName };
+                const cleanBase = cleanTopicName(originalFileName);
+                return {
+                    blob: new Blob([pdfBytes], { type: 'application/pdf' }),
+                    fileName: `${cleanBase}_${targetLang}_요약학습지.pdf`
+                };
             }
         }
 
@@ -2939,7 +2430,8 @@ ${contextGuide}
             const btnText = document.getElementById('download-btn-text');
             try {
                 btn.disabled = true;
-                btnText.textContent = "PDF 생성 중...";
+                btnText.textContent = '고화질 PDF 생성 중...';
+                showToast('인쇄용 고화질 PDF를 생성하고 있습니다...', 'info');
                 const { blob, fileName } = await buildFinalPdfBlob();
                 const link = document.createElement('a');
                 link.href = registerObjectUrl(URL.createObjectURL(blob));
@@ -2947,75 +2439,66 @@ ${contextGuide}
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                showToast("고화질 PDF 다운로드가 시작되었습니다!", "success");
+                showToast('인쇄용 PDF 다운로드가 완료되었습니다!', 'success');
             } catch (err) {
                 console.error(err);
-                showToast("PDF 저장 중 오류가 발생했습니다.", "error");
+                showToast('PDF 저장 중 오류가 발생했습니다.', 'error');
             } finally {
                 btn.disabled = false;
-                btnText.textContent = "인쇄용 PDF 저장";
+                btnText.textContent = '인쇄용 PDF 저장';
             }
         });
 
-        // 모바일 메신저(카카오톡 등) 전송용 고화질 PNG 이미지 저장
         document.getElementById('download-img-btn').addEventListener('click', async () => {
             const targetLang = getSelectedTargetLanguage();
             try {
-                showToast("고화질 이미지를 생성하고 있습니다...", "info");
+                showToast("고화질 이미지를 생성하는 중...", "info");
                 if (currentMode === 'pdf' && pdfPagesModel.length > 0) {
-                    const firstPage = pdfPagesModel[0];
-                    const mergedCanvas = document.createElement('canvas');
-                    mergedCanvas.width = firstPage.displayWidth * 2;
-                    mergedCanvas.height = firstPage.displayHeight * 2;
-                    const ctx = mergedCanvas.getContext('2d');
-                    ctx.drawImage(firstPage.previewCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
-                    const subCanvas = renderPageSubtitlesToTransparentCanvas(firstPage, (firstPage.displayWidth * 2) / firstPage.pdfWidth);
-                    ctx.drawImage(subCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
-
-                    const link = document.createElement('a');
-                    link.href = mergedCanvas.toDataURL('image/png');
-                    link.download = `${cleanTopicName(originalFileName)}_${targetLang}_1쪽.png`;
-                    link.click();
-                } else {
-                    const canvases = await captureA4SheetsUnscaled();
-                    canvases.forEach((canvas, idx) => {
+                    const pageEls = Array.from(document.querySelectorAll('#pdf-studio-pages-container .pdf-studio-page'));
+                    for (let idx = 0; idx < pageEls.length; idx++) {
+                        const pageEl = pageEls[idx];
+                        const prevTransform = pageEl.style.transform;
+                        pageEl.style.transform = 'none';
+                        const canvas = await html2canvas(pageEl, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                        pageEl.style.transform = prevTransform;
                         const link = document.createElement('a');
                         link.href = canvas.toDataURL('image/png');
-                        link.download = `${cleanTopicName(originalFileName)}_${targetLang}_${idx + 1}쪽.png`;
+                        link.download = `${originalFileName.replace(/\.\w+$/, '')}_${targetLang}_${idx + 1}쪽.png`;
                         link.click();
-                    });
+                    }
+                } else {
+                    const sheets = Array.from(document.querySelectorAll('#worksheet-pages-container .a4-sheet'));
+                    for (let idx = 0; idx < sheets.length; idx++) {
+                        const sheet = sheets[idx];
+                        const prevTransform = sheet.style.transform;
+                        sheet.style.transform = 'none';
+                        const canvas = await html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
+                        sheet.style.transform = prevTransform;
+                        const link = document.createElement('a');
+                        link.href = canvas.toDataURL('image/png');
+                        link.download = `${originalFileName.replace(/\.\w+$/, '')}_${targetLang}_${idx + 1}쪽.png`;
+                        link.click();
+                    }
                 }
                 showToast("이미지(PNG) 저장이 완료되었습니다!", "success");
             } catch (err) {
-                console.error(err);
                 showToast("이미지 저장 중 오류가 발생했습니다.", "error");
             }
         });
 
-        // 모바일 네이티브 공유 시트 (카카오톡, 클래스팅, 이메일 등 즉시 공유)
         document.getElementById('mobile-share-btn').addEventListener('click', async () => {
             try {
                 const { blob, fileName } = await buildFinalPdfBlob();
                 const file = new File([blob], fileName, { type: "application/pdf" });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        title: fileName,
-                        text: '다문화 이음 AI 스튜디오에서 생성한 이중언어 학습지입니다.',
-                        files: [file]
-                    });
+                    await navigator.share({ title: fileName, text: '이중언어 학습지', files: [file] });
                 } else {
-                    // 파일 직접 공유 미지원 브라우저에서는 즉시 다운로드로 폴백
                     const link = document.createElement('a');
                     link.href = registerObjectUrl(URL.createObjectURL(blob));
                     link.download = fileName;
                     link.click();
-                    showToast("현재 브라우저에서는 파일 다운로드로 자동 전환되었습니다.", "info");
                 }
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    showToast("공유 기능을 실행할 수 없어 PDF 다운로드 버튼을 이용해 주세요.", "info");
-                }
-            }
+            } catch (err) {}
         });
     </script>
 </body>
